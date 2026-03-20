@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TicketRepository extends JpaRepository<Ticket, String> {
-
+    Page<Ticket> findAll(Pageable pageable);
+    Page<Ticket> findByStatus(StatusType status, Pageable pageable);
+    Page<Ticket> findByPriority(PriorityType priorityType, Pageable pageable);
     Page<Ticket> findByStatusAndPriority(StatusType status, PriorityType priority, Pageable pageable);
 }

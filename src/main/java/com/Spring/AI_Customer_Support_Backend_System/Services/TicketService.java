@@ -2,15 +2,24 @@ package com.Spring.AI_Customer_Support_Backend_System.Services;
 
 import com.Spring.AI_Customer_Support_Backend_System.DTO.CreateTicketRequestDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.CreateTicketResponseDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.TicketResponseDTO;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Ticket;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,5 +43,81 @@ public class TicketService {
         ticketRepository.save(ticket);
 
         return modelMapper.map(ticket , CreateTicketResponseDTO.class);
+    }
+
+
+    public Page<TicketResponseDTO> getTicketByStatusAndPriority(StatusType status, PriorityType priority, int page, int size) {
+        Page<Ticket> tickets;
+        Pageable pageable = PageRequest.of(page,size);
+        if(status==null && priority==null)
+            tickets = ticketRepository.findAll(pageable);
+        else if (status==null) {
+            tickets = ticketRepository.findByPriority(priority,pageable);
+        }
+        else if (priority==null)    {
+            tickets = ticketRepository.findByStatus(status,pageable);
+        }
+        else
+            tickets = ticketRepository.findByStatusAndPriority(status,priority,pageable);
+
+        return tickets.map(ticket -> {
+            TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
+            dto.setAssignedToId(
+                    ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
+            );
+            return dto;
+        });
+    }
+
+    @Transactional
+    public TicketResponseDTO assignTicket(String ticketId, String agentId) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() -> new IllegalArgumentException("Ticket Not found"));
+        User agent = userRepository.findById(agentId).orElseThrow(() -> new IllegalArgumentException("Agent Not Found"));
+
+        if(agent.getRole()!= RoleType.AGENT)
+            throw new IllegalArgumentException("User is not an Agent");
+
+        ticket.setAssignedTo(agent);
+
+        ticket.setStatus(StatusType.IN_PROGRESS);
+
+        TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
+        dto.setAssignedToId(
+                ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
+        );
+        return dto;
+    }
+
+
+    @Transactional
+    public TicketResponseDTO changeStatus(String ticketId, StatusType status) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() -> new IllegalArgumentException("Ticket Not found"));
+
+        if(ticket.getAssignedTo() == null) {
+            throw new IllegalArgumentException("Ticket is not assigned to any agent");
+        }
+
+        StatusType currentStatus = ticket.getStatus();
+
+        if(currentStatus == StatusType.OPEN && status != StatusType.IN_PROGRESS) {
+            throw new IllegalArgumentException("Invalid status transition");
+        }
+
+        if(currentStatus == StatusType.IN_PROGRESS && status != StatusType.CLOSED) {
+            throw new IllegalArgumentException("Invalid status transition");
+        }
+
+        if(currentStatus == StatusType.CLOSED) {
+            throw new IllegalArgumentException("Ticket is already resolved");
+        }
+
+        ticket.setStatus(status);
+
+        TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
+        dto.setAssignedToId(
+                ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
+        );
+        return dto;
+
     }
 }

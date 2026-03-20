@@ -47,4 +47,149 @@ Next, I will move to:
 👉 Building service layer (business logic)
 👉 Implementing APIs
 
-This is not just a basic project anymore — it is now a real-world backend system foundation.
+
+🧠 AI-Powered Customer Support Backend — Progress After Entity Design
+
+After completing the entity design and database mapping, I moved to the backend implementation phase, where I started building the actual system behavior using repositories, service layers, and APIs.
+
+
+🗄️ Repository Layer
+
+I created repository interfaces for all core entities (User, Ticket, Message) using Spring Data JPA. These repositories extend JpaRepository, which provides built-in methods for common database operations like save, find, delete, and pagination.
+
+For the Ticket entity, I added custom query methods to support filtering and pagination:
+	•	Find tickets by status
+	•	Find tickets by priority
+	•	Find tickets by both status and priority
+
+This allowed me to build flexible APIs without writing complex SQL queries.
+
+⸻
+
+⚙️ Service Layer (Business Logic)
+
+I implemented a service layer to handle all business logic instead of putting logic inside controllers. This follows clean architecture principles and makes the code more maintainable and testable.
+
+⸻
+
+🎫 Create Ticket API
+
+I built the first core API to create tickets.
+
+Key logic implemented:
+	•	Fetch user from database using userId
+	•	Validate that the user exists
+	•	Create a new ticket with:
+	•	status = OPEN
+	•	priority = user-provided or default (MEDIUM)
+	•	assignedTo = null
+	•	Save ticket to database
+
+I used DTOs (Data Transfer Objects) to separate request and response from internal entities:
+	•	CreateTicketRequestDTO for input
+	•	CreateTicketResponseDTO for output
+
+I also used ModelMapper to convert entity objects to DTOs and manually handled fields like IDs when needed.
+
+⸻
+
+📄 Get Tickets API (Pagination + Filtering)
+
+Next, I implemented a scalable ticket retrieval API, which is a very important feature in real-world systems.
+
+This API supports:
+	•	Pagination using page and size
+	•	Filtering by:
+	•	status
+	•	priority
+
+I handled multiple cases in the service layer:
+	•	Both status and priority present
+	•	Only status
+	•	Only priority
+	•	No filters (return all tickets)
+
+I used Spring’s Pageable and PageRequest to efficiently fetch paginated data from the database and mapped results to TicketResponseDTO.
+
+This step helped me understand how to build APIs that can handle large datasets efficiently.
+
+⸻
+
+🧑‍💼 Assign Ticket API (Admin Feature)
+
+I then implemented the feature where an admin assigns a ticket to an agent.
+
+Key logic:
+	•	Fetch ticket and agent from database
+	•	Validate both exist
+	•	Ensure the selected user has role = AGENT
+	•	Assign the ticket to the agent
+	•	Update ticket status from OPEN → IN_PROGRESS
+	•	Return updated ticket as DTO
+
+I also learned how to handle nested mapping issues when converting entities to DTOs. Since DTO should not expose full entities, I used fields like assignedToId instead of including the entire User object and manually mapped it.
+
+This step introduced me to:
+	•	Role validation
+	•	Update operations
+	•	Real-world business rules
+
+⸻
+
+🔄 Update Ticket Status API (Agent Feature)
+
+Finally, I implemented the API to update ticket status, completing the ticket lifecycle.
+
+Key logic:
+	•	Fetch ticket from database
+	•	Ensure the ticket is assigned to an agent
+	•	Validate allowed status transitions:
+	•	OPEN → IN_PROGRESS
+	•	IN_PROGRESS → RESOLVED
+	•	Prevent invalid transitions like:
+	•	OPEN → RESOLVED
+	•	RESOLVED → any other state
+	•	Update status and return response
+
+This introduced the concept of state machine validation, which is widely used in real systems to control workflow transitions.
+
+⸻
+
+⚠️ Important Backend Concepts Learned
+
+During this phase, I learned several critical backend concepts:
+	•	DTO pattern to avoid exposing entities directly
+	•	ModelMapper limitations, especially with nested objects
+	•	Manual mapping for fields like assignedToId
+	•	Pagination using Pageable and PageRequest
+	•	Dynamic filtering logic in service layer
+	•	Role-based validation (Agent vs User)
+	•	State transition validation (workflow control)
+	•	Use of @Transactional and JPA dirty checking
+	•	Avoiding infinite recursion in bi-directional relationships
+
+⸻
+
+🧠 System Design Understanding
+
+At this stage, my project is no longer a simple CRUD application. It now behaves like a real-world support system with:
+	•	Defined workflows
+	•	Role-based actions
+	•	Controlled state transitions
+	•	Scalable data retrieval
+	•	Clean layered architecture
+
+⸻
+
+🚀 Current Status
+
+I have now completed:
+	•	Repository layer
+	•	Service layer with business logic
+	•	Create Ticket API
+	•	Get Tickets API with pagination and filtering
+	•	Assign Ticket API (Admin flow)
+	•	Update Ticket Status API (Agent flow)
+
+⸻
+
