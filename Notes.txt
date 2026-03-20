@@ -1,0 +1,50 @@
+
+🧠 AI-Powered Customer Support Backend — What I Have Built So Far
+
+I started by designing the core structure of a real-world customer support system. First, I identified the main actors involved in the system: User, Agent, and Admin. Instead of creating separate tables for each, I used a single User entity with a role field (enum) to differentiate between them. This is a standard industry approach called role-based design, which keeps the system simple and scalable.
+
+Next, I designed the core entities of the system: User, Ticket, and Message.
+
+The User entity stores basic information like name, email, password, role, and timestamps. I ensured that the email is unique and important fields like name and password are non-null. I also used enums for roles (USER, AGENT, ADMIN) and stored them as strings in the database to avoid future issues.
+
+The Ticket entity represents the main feature of the system. Each ticket contains a title, description, status (OPEN, IN_PROGRESS, RESOLVED), and priority (LOW, MEDIUM, HIGH). I added relationships to show that a ticket is created by a user and can be assigned to an agent. I also handled timestamps for tracking creation and updates. Additionally, I made sure that a ticket can exist without an assigned agent initially.
+
+
+Then I designed the Message entity, which represents the conversation inside a ticket. Instead of building a direct messaging system (like WhatsApp), I followed a thread-based design, where each ticket acts as a conversation container. Messages belong to a specific ticket and are sent by a user (either the customer or the agent). This design is used in real support systems and allows features like conversation history and AI summarization.
+
+I also implemented relationships between entities:
+	•	A User can create multiple tickets
+	•	A User (agent) can be assigned multiple tickets
+	•	A Ticket can have multiple messages
+	•	A Message belongs to one ticket and one sender
+
+To make the system more complete, I added bi-directional relationships, meaning entities can reference each other in both directions. For example, a User can access their tickets, and a Ticket can access its messages.
+
+However, this created a problem called infinite recursion when returning data through APIs. Because entities were linked in loops (User → Ticket → Message → User…), the system could crash or return huge nested JSON responses. To fix this, I used @JsonIgnore on certain fields to prevent unnecessary data from being serialized, ensuring clean and safe API responses.
+
+
+I also made several important technical decisions:
+	•	Used UUIDs for primary keys
+	•	Used @CreationTimestamp and @UpdateTimestamp for automatic time tracking
+	•	Used TEXT type for long descriptions
+	•	Used @JoinColumn for clear database relationships
+	•	Used Lombok to reduce boilerplate code
+
+Overall, I have successfully built a solid backend domain model that reflects how real-world customer support systems work. The system now has proper structure, relationships, constraints, and is ready for the next phase, which includes repositories, service layer, and API development.
+
+
+🚀 Current Status
+
+I have completed:
+	•	System design
+	•	Entity modeling
+	•	Database mapping
+	•	Relationship handling
+	•	Recursion problem handling
+
+Next, I will move to:
+👉 Creating repositories
+👉 Building service layer (business logic)
+👉 Implementing APIs
+
+This is not just a basic project anymore — it is now a real-world backend system foundation.
