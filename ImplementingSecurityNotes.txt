@@ -514,3 +514,6 @@ JWT → for all API access
 
 If you revise just this once properly,
 you can explain authentication better than 90% candidates.
+
+Now remember the oAuth2 endpoint is /auth/oauth2/authorization/google -- It handles both login and signup ---
+And other email password endpoint is login and signup ---

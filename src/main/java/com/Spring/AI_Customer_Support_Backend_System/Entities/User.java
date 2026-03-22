@@ -40,6 +40,7 @@ public class User implements UserDetails {
 
     private boolean enabled;
 
+    //ProviderId and ProviderType are for oAuth2 ---
     private String providerId;
 
     @Enumerated(EnumType.STRING)

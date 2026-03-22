@@ -305,3 +305,96 @@ During this phase, I learned several important concepts:
 ⸻
 
 🧠 System Design Upgrade
+
+
+Then making the sendMessage API ---
+Inside the Controller we get the ticketId and the MessageRequestDTO containing only the content --- We fetch the user using JWT --- from SecurityContextHolder and then inside the MessageService Method --- We check for three things---
+If the user and the ticket are not null, if the user is either USER or AGENT, if the ticket belongs to the user or belongs to the AGENT. then we make the Message ---> save it and then send the MessageResponseDTO
+
+Here are short, clean notes for the 3 APIs you built 👇
+
+⸻
+
+🧠 Message System APIs (Chat Feature)
+
+I implemented a ticket-based messaging system, where each ticket acts as a conversation thread between the user and the assigned agent.
+
+⸻
+
+✉️ 1. Send Message API
+
+POST /tickets/{ticketId}/messages
+
+This API allows a user or agent to send a message inside a ticket.
+
+Key logic:
+	•	Extract current user from JWT (SecurityContext)
+	•	Fetch ticket from database
+	•	Validate access:
+	•	Only ticket creator OR assigned agent can send messages
+	•	Create a new Message entity with:
+	•	content
+	•	sender
+	•	ticket
+	•	If ticket is in OPEN state → update to IN_PROGRESS
+	•	Save message and return MessageResponseDTO
+
+⸻
+
+📥 2. Get Messages API
+
+GET /tickets/{ticketId}/messages
+
+This API fetches the full conversation history of a ticket.
+
+Key logic:
+	•	Extract current user from JWT
+	•	Validate access (same as send message)
+	•	Fetch messages using:
+	•	findByTicketOrderByCreatedAtAsc()
+	•	Convert each Message → MessageResponseDTO
+	•	Return list of messages (old → new order)
+
+⸻
+
+🎫 3. Get Ticket Detail API
+
+GET /tickets/{ticketId}
+
+This API returns complete ticket details along with chat history.
+
+Key logic:
+	•	Extract current user from JWT
+	•	Validate access (creator OR assigned agent)
+	•	Fetch ticket details
+	•	Fetch messages separately (sorted)
+	•	Map messages → MessageResponseDTO
+	•	Return TicketDetailedResponseDTO containing:
+	•	ticket info (title, description, status, priority)
+	•	createdById, assignedToId
+	•	list of messages
+
+⸻
+
+⚠️ Key Learnings
+	•	Never return entities directly → always use DTOs
+	•	Always validate access in secure APIs
+	•	Use SecurityContext instead of passing userId
+	•	Maintain proper ordering for chat systems
+	•	Handle null cases (like unassigned tickets)
+	•	Implement workflow logic (OPEN → IN_PROGRESS)
+
+⸻
+
+🚀 Current Status
+
+You now have:
+	•	✅ Ticket system
+	•	✅ Assignment system
+	•	✅ Status workflow
+	•	✅ Chat system (send + fetch messages)
+	•	✅ Ticket detail API (full view)
+
+⸻
+
+👉 Your backend is now feature-complete for a basic support system 💯

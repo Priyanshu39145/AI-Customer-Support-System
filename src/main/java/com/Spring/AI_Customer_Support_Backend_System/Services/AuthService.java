@@ -108,9 +108,10 @@ public class AuthService {
         }
         //If the user exists with the email and also the email is equal to the username ---
         //Then we need not create another user --- we throw an Exception
-        else {
-            throw new BadCredentialsException("This email is already registered with the provider");
-        }
+        //This is not needed as we need to log in the user then --- and we do it in the next step ---
+//        else {
+//            throw new BadCredentialsException("This email is already registered with the provider");
+//        }
 
         //Now we have to log in the user by sending a LoginResponseDTO ---- It requires the JWT and the userId
         LoginResponseDTO loginResponseDTO = new LoginResponseDTO(user1.getEmail(), user1.getRole(), authUtil.generateAccessToken(user1));

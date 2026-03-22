@@ -28,6 +28,8 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
+                //We have allowed auth and login endpoints full permission
+                //We have authenticated all others
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/login/**").permitAll()
                         .requestMatchers("/tickets/{ticketId}/assign").hasRole("ADMIN")
@@ -35,12 +37,15 @@ public class SecurityConfig {
                         .requestMatchers("/tickets/**").authenticated()
                         .anyRequest().authenticated()
                 )
+                //Disables form login
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
+                //Added jwtAuthFilter to the SecurityFilterChain before the UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 //We add the oAuth2Login configuration and set its failure and success handlers ---
                 //Failure handler just gives us an error log
                 //Success Handler --- see in oAuth2SuccessHandler class
+                //For oAuth2 we have set the autorization endpoint as /auth/oauth2/authorization --- when this endpoint will be hit then only we will login through Google
                 .oauth2Login(oAuth2 -> oAuth2
                         .authorizationEndpoint(auth -> auth
                                 .baseUri("/auth/oauth2/authorization") // ✅ your custom path
@@ -54,6 +59,7 @@ public class SecurityConfig {
                 .exceptionHandling(exceptionHandlingConfigurer -> exceptionHandlingConfigurer.accessDeniedHandler((request, response, accessDeniedException) -> {
                     handlerExceptionResolver.resolveException(request,response, null , accessDeniedException);
                 }))
+                //We have done this to prevent oAuth2 to interfere with normal email password login
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(401);

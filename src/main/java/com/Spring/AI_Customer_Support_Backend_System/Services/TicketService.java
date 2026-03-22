@@ -1,13 +1,13 @@
 package com.Spring.AI_Customer_Support_Backend_System.Services;
 
-import com.Spring.AI_Customer_Support_Backend_System.DTO.CreateTicketRequestDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.CreateTicketResponseDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.TicketResponseDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.*;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Message;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Ticket;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
+import com.Spring.AI_Customer_Support_Backend_System.Repositories.MessageRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository;
 import jakarta.transaction.Transactional;
@@ -27,6 +27,7 @@ public class TicketService {
 
     private final UserRepository userRepository;
     private final TicketRepository ticketRepository;
+    private final MessageRepository messageRepository;
     private final ModelMapper modelMapper;
 
     public CreateTicketResponseDTO createTicket(String userId, CreateTicketRequestDTO requestDTO)    {
@@ -118,6 +119,28 @@ public class TicketService {
                 ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
         );
         return dto;
+
+    }
+
+    public TicketDetailedResponseDTO getTicketById(String ticketId, User user) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+        if(ticket==null || user==null)
+            throw new IllegalArgumentException("User or Ticket doesnt exist");
+        else if(
+                !user.getId().equals(ticket.getCreatedBy().getId()) &&
+                        (ticket.getAssignedTo() == null ||
+                                !user.getId().equals(ticket.getAssignedTo().getId()))
+        )
+            throw new IllegalArgumentException("This User is not allowed in this chat");
+
+        //We are fetching messages directly from ticket --- Lazy Fetch applied ---
+        //We are fetching messages direct by message repository ---
+        List<Message> messages = messageRepository.findByTicketOrderByCreatedAtAsc(ticket);
+
+        List<MessageResponseDTO> messageDTOs = messages.stream().map(message -> new MessageResponseDTO(message.getId(), message.getContent(), message.getSender().getId(), message.getCreatedAt())).toList();
+
+        return new
+                TicketDetailedResponseDTO(ticketId,ticket.getTitle(),ticket.getDescription(),ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId(),messageDTOs);
 
     }
 }
