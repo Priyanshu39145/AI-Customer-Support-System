@@ -42,6 +42,7 @@ public class User implements UserDetails {
 
     private String providerId;
 
+    @Enumerated(EnumType.STRING)
     private ProviderType providerType;
 
     @JsonIgnore
