@@ -17,6 +17,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 public class TicketController {
@@ -56,6 +58,28 @@ public class TicketController {
         //We have to set /doctors as request matchers to only roles containing doctor ---
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ticketService.getTicketById(ticketId,user));
+    }
+
+    @GetMapping("/users/me/tickets")
+    public ResponseEntity<Page<TicketResponseDTO>> getTicketsOfUser(@RequestParam(defaultValue = "0") int page,
+                                                                    @RequestParam(defaultValue = "10") int size,
+                                                                    @RequestParam(required = false) StatusType status,
+                                                                    @RequestParam(required = false) PriorityType priority)    {
+        //This statement gives us all the details of the current user including the role ---
+        //We have to set /doctors as request matchers to only roles containing doctor ---
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(ticketService.getTicketsOfUser(user,status,priority,page,size));
+    }
+
+    @GetMapping("/agents/me/tickets")
+    public ResponseEntity<Page<TicketResponseDTO>> getTicketsOfAgent(@RequestParam(defaultValue = "0") int page,
+                                                                    @RequestParam(defaultValue = "10") int size,
+                                                                    @RequestParam(required = false) StatusType status,
+                                                                    @RequestParam(required = false) PriorityType priority)    {
+        //This statement gives us all the details of the current user including the role ---
+        //We have to set /doctors as request matchers to only roles containing doctor ---
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(ticketService.getTicketsOfAgent(user,status,priority,page,size));
     }
 
 }

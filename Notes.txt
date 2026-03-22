@@ -398,3 +398,28 @@ You now have:
 ⸻
 
 👉 Your backend is now feature-complete for a basic support system 💯
+
+👤 User Dashboard API
+
+GET /users/me/tickets
+	•	Fetches tickets created by the logged-in user
+	•	Uses JWT (SecurityContext) to identify user
+	•	Supports:
+	•	Pagination
+	•	Filtering (status, priority)
+	•	Returns Page<TicketResponseDTO>
+	•	Helps users track their own tickets
+
+⸻
+
+🧑‍💼 Agent Dashboard API
+
+GET /agents/me/tickets
+	•	Fetches tickets assigned to the logged-in agent
+	•	Validates role = AGENT
+	•	Supports:
+	•	Pagination
+	•	Filtering (status, priority)
+	•	Sorting by priority (HIGH → LOW)
+	•	Returns Page<TicketResponseDTO>
+	•	Acts as agent’s work queue

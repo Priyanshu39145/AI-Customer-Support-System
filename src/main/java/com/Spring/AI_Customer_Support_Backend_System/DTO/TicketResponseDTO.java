@@ -17,5 +17,6 @@ public class TicketResponseDTO {
     private String title;
     private StatusType status;
     private PriorityType priority;
+    private String createdById;
     private String assignedToId;
 }

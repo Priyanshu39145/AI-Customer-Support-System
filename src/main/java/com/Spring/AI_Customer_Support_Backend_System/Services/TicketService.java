@@ -63,6 +63,9 @@ public class TicketService {
 
         return tickets.map(ticket -> {
             TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
+            dto.setCreatedById(
+                    ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null
+            );
             dto.setAssignedToId(
                     ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
             );
@@ -83,6 +86,9 @@ public class TicketService {
         ticket.setStatus(StatusType.IN_PROGRESS);
 
         TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
+        dto.setCreatedById(
+                ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null
+        );
         dto.setAssignedToId(
                 ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
         );
@@ -115,6 +121,9 @@ public class TicketService {
         ticket.setStatus(status);
 
         TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
+        dto.setCreatedById(
+                ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null
+        );
         dto.setAssignedToId(
                 ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
         );
@@ -142,5 +151,41 @@ public class TicketService {
         return new
                 TicketDetailedResponseDTO(ticketId,ticket.getTitle(),ticket.getDescription(),ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId(),messageDTOs);
 
+    }
+
+    public Page<TicketResponseDTO> getTicketsOfUser(User user, StatusType status, PriorityType priority, int page, int size) {
+        Pageable pageable = PageRequest.of(page,size);
+
+        Page<Ticket> tickets;
+
+        if(status==null && priority==null)
+            tickets = ticketRepository.findByCreatedBy(user,pageable);
+        else if(status==null)
+            tickets = ticketRepository.findByCreatedByAndPriority(user,priority,pageable);
+        else if(priority==null)
+            tickets = ticketRepository.findByCreatedByAndStatus(user,status,pageable);
+        else
+            tickets = ticketRepository.findByCreatedByAndStatusAndPriority(user,status,priority,pageable);
+
+        Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
+        return ticketDTOs;
+    }
+
+    public Page<TicketResponseDTO> getTicketsOfAgent(User user, StatusType status, PriorityType priority, int page, int size) {
+        Pageable pageable = PageRequest.of(page,size);
+
+        Page<Ticket> tickets;
+
+        if(status==null && priority==null)
+            tickets = ticketRepository.findByAssignedTo(user,pageable);
+        else if(status==null)
+            tickets = ticketRepository.findByAssignedToAndPriority(user,priority,pageable);
+        else if(priority==null)
+            tickets = ticketRepository.findByAssignedToAndStatus(user,status,pageable);
+        else
+            tickets = ticketRepository.findByAssignedToAndStatusAndPriority(user,status,priority,pageable);
+
+        Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
+        return ticketDTOs;
     }
 }
