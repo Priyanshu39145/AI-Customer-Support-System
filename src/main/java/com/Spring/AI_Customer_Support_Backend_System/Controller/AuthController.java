@@ -1,0 +1,30 @@
+package com.Spring.AI_Customer_Support_Backend_System.Controller;
+
+import com.Spring.AI_Customer_Support_Backend_System.DTO.LoginRequestDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.LoginResponseDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterRequestDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterResponseDTO;
+import com.Spring.AI_Customer_Support_Backend_System.Services.AuthService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<RegisterResponseDTO> register(@RequestBody RegisterRequestDTO registerRequestDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(registerRequestDTO));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequestDTO)    {
+        return ResponseEntity.ok(authService.login(loginRequestDTO));
+    }
+
+}

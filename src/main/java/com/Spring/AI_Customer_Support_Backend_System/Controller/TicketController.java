@@ -11,6 +11,7 @@ import org.apache.coyote.Response;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +21,7 @@ public class TicketController {
     private final TicketService ticketService;
 
     @PostMapping("/tickets")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<CreateTicketResponseDTO> createTicket(@RequestParam String userId, @RequestBody CreateTicketRequestDTO requestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(userId,requestDTO));
     }
@@ -34,11 +36,13 @@ public class TicketController {
     }
 
     @PutMapping("/tickets/{ticketId}/assign")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TicketResponseDTO> assignTicket(@PathVariable("ticketId") String ticketId, @RequestParam String agentId )   {
         return ResponseEntity.status(HttpStatus.OK).body(ticketService.assignTicket(ticketId,agentId));
     }
 
     @PutMapping("/tickets/{ticketId}/status")
+    @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<TicketResponseDTO> changeStatus(@PathVariable("ticketId") String ticketId, @RequestParam StatusType status)  {
         return ResponseEntity.ok(ticketService.changeStatus(ticketId, status));
     }
