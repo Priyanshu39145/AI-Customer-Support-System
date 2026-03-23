@@ -82,4 +82,16 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getTicketsOfAgent(user,status,priority,page,size));
     }
 
+    @GetMapping("/tickets/search")
+    public ResponseEntity<Page<TicketResponseDTO>> searchTicket(@RequestParam String keyword,
+                                                                @RequestParam(defaultValue = "0") int page,
+                                                                @RequestParam(defaultValue = "10") int size,
+                                                                @RequestParam(required = false) StatusType status,
+                                                                @RequestParam(required = false) PriorityType priority)  {
+        //This statement gives us all the details of the current user including the role ---
+        //We have to set /doctors as request matchers to only roles containing doctor ---
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(ticketService.searchTickets(user,keyword,page,size,status,priority));
+    }
+
 }

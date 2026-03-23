@@ -188,4 +188,28 @@ public class TicketService {
         Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
         return ticketDTOs;
     }
+
+    public Page<TicketResponseDTO> searchTickets(User user,String keyword, int page, int size, StatusType status, PriorityType priority) {
+        Pageable pageable = PageRequest.of(page,size);
+        if(user==null || user.getRole()==RoleType.USER)
+            throw new IllegalArgumentException("User is not allowed to see");
+
+        if(keyword == null || keyword.isBlank()) {
+            // call normal filtering method
+            return getTicketByStatusAndPriority(status, priority, page, size);
+        }
+
+        Page<Ticket> tickets = null;
+        if(status==null && priority==null)
+            tickets = ticketRepository.searchTickets(keyword,pageable);
+        else if(status==null)
+            tickets = ticketRepository.searchTicketsByPriority(keyword,priority,pageable);
+        else if(priority==null)
+            tickets = ticketRepository.searchTicketsByStatus(keyword,status,pageable);
+        else
+            tickets = ticketRepository.searchTicketsByStatusAndPriority(keyword,status,priority,pageable);
+
+        Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
+        return ticketDTOs;
+    }
 }

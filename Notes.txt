@@ -423,3 +423,17 @@ GET /agents/me/tickets
 	•	Sorting by priority (HIGH → LOW)
 	•	Returns Page<TicketResponseDTO>
 	•	Acts as agent’s work queue
+
+
+🔍 Search Tickets API — Short Notes
+	•	Implemented GET /tickets/search to search tickets using a keyword.
+	•	Supports pagination (page, size) and optional filters (status, priority).
+	•	Used JPQL (@Query) with LIKE to search in title + description.
+	•	Handled all cases:
+	•	keyword only
+	•	keyword + status
+	•	keyword + priority
+	•	keyword + status + priority
+	•	If keyword is null/empty → fallback to normal GET tickets API.
+	•	Returned results as Page using mapping.
+	•	Ensured only authenticated users can access.
