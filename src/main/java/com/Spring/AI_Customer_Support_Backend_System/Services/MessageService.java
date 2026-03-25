@@ -10,6 +10,8 @@ import com.Spring.AI_Customer_Support_Backend_System.Repositories.MessageReposit
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,6 +24,7 @@ public class MessageService {
     private final UserRepository userRepository;
     private final TicketRepository ticketRepository;
 
+    @CacheEvict(value = "ticketMessages", key = "#ticketId + '-' + #user.id")
     public MessageResponseDTO sendMessage(User user, String ticketId, MessageRequestDTO messageRequestDTO) {
 
 
@@ -47,6 +50,7 @@ public class MessageService {
         return new MessageResponseDTO(message.getId(), message.getContent(), message.getSender().getId(), message.getCreatedAt());
     }
 
+    @Cacheable(value = "ticketMessages", key = "#ticketId + '-' + #user.id")
     public List<MessageResponseDTO> getMessages(String ticketId, User user) {
 
         Ticket ticket = ticketRepository.findById(ticketId).orElse(null);

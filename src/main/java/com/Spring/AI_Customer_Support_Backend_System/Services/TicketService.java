@@ -13,6 +13,10 @@ import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +34,14 @@ public class TicketService {
     private final MessageRepository messageRepository;
     private final ModelMapper modelMapper;
 
+    //This will update the values in all existing cache keys --
+    @Caching(evict = {
+            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #user.id"),
+            @CacheEvict(value = "ticketsList", allEntries = true),
+            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
+            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
+            @CacheEvict(value = "searchticketsList", allEntries = true)
+    })
     public CreateTicketResponseDTO createTicket(String userId, CreateTicketRequestDTO requestDTO)    {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -47,6 +59,7 @@ public class TicketService {
     }
 
 
+    @Cacheable(value = "ticketsList", key = "#page + '-' + #size + '-' + #status + '-' + #priority")//Here we cache the output of this request using the parameters value as key ----
     public Page<TicketResponseDTO> getTicketByStatusAndPriority(StatusType status, PriorityType priority, int page, int size) {
         Page<Ticket> tickets;
         Pageable pageable = PageRequest.of(page,size);
@@ -74,6 +87,13 @@ public class TicketService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #user.id"),
+            @CacheEvict(value = "ticketsList", allEntries = true),
+            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
+            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
+            @CacheEvict(value = "searchticketsList", allEntries = true)
+    })
     public TicketResponseDTO assignTicket(String ticketId, String agentId) {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() -> new IllegalArgumentException("Ticket Not found"));
         User agent = userRepository.findById(agentId).orElseThrow(() -> new IllegalArgumentException("Agent Not Found"));
@@ -97,6 +117,13 @@ public class TicketService {
 
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #user.id"),
+            @CacheEvict(value = "ticketsList", allEntries = true),
+            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
+            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
+            @CacheEvict(value = "searchticketsList", allEntries = true)
+    })
     public TicketResponseDTO changeStatus(String ticketId, StatusType status) {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() -> new IllegalArgumentException("Ticket Not found"));
 
@@ -131,6 +158,7 @@ public class TicketService {
 
     }
 
+    @Cacheable(value = "tickets", key = "#ticketId + '-' + #user.id") //Here we store the Cache with the ticketId and userId as the key -- Here user.id automatically gets the Id using the user.getId method
     public TicketDetailedResponseDTO getTicketById(String ticketId, User user) {
         Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
         if(ticket==null || user==null)
@@ -153,6 +181,7 @@ public class TicketService {
 
     }
 
+    @Cacheable(value = "ticketsListOfUser", key = "#page + '-' + #size + '-' + #status + '-' + #priority + '-' + #user.id")
     public Page<TicketResponseDTO> getTicketsOfUser(User user, StatusType status, PriorityType priority, int page, int size) {
         Pageable pageable = PageRequest.of(page,size);
 
@@ -170,7 +199,7 @@ public class TicketService {
         Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
         return ticketDTOs;
     }
-
+    @Cacheable(value = "ticketsListOfAgent", key = "#page + '-' + #size + '-' + #status + '-' + #priority + '-' + #user.id")
     public Page<TicketResponseDTO> getTicketsOfAgent(User user, StatusType status, PriorityType priority, int page, int size) {
         Pageable pageable = PageRequest.of(page,size);
 
@@ -189,6 +218,7 @@ public class TicketService {
         return ticketDTOs;
     }
 
+    @Cacheable(value = "searchticketsList", key = "#keyword + '-' + #page + '-' + #size + '-' + #status + '-' + #priority + '-' + #user.id")
     public Page<TicketResponseDTO> searchTickets(User user,String keyword, int page, int size, StatusType status, PriorityType priority) {
         Pageable pageable = PageRequest.of(page,size);
         if(user==null || user.getRole()==RoleType.USER)

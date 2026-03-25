@@ -437,3 +437,52 @@ GET /agents/me/tickets
 	•	If keyword is null/empty → fallback to normal GET tickets API.
 	•	Returned results as Page using mapping.
 	•	Ensured only authenticated users can access.
+
+
+🔥 Redis Integration — Short Notes
+	•	Integrated Redis caching to improve performance of read APIs.
+	•	Enabled caching using @EnableCaching and configured Redis in properties.
+
+⸻
+
+⚡ Caching Applied
+	•	Ticket APIs
+	•	getTicketById → cached per ticketId + userId
+	•	getTickets → cached with pagination + filters
+	•	getTicketsOfUser / Agent → cached per user + filters
+	•	Search API
+	•	Cached results using keyword + filters + userId
+	•	Message API
+	•	getMessages → cached per ticketId + userId
+
+⸻
+
+🧠 Cache Keys
+	•	Used dynamic keys (SpEL)
+	•	Included userId → ensures security (no data leak)
+
+⸻
+
+🔄 Cache Eviction
+	•	Added @Caching + @CacheEvict on:
+	•	createTicket
+	•	assignTicket
+	•	changeStatus
+	•	sendMessage
+
+👉 Ensures no stale data
+
+⸻
+
+⚠️ Key Principles Learned
+	•	Read APIs → Cache (@Cacheable)
+	•	Write APIs → Clear cache (@CacheEvict)
+	•	Always include user context in cache key
+	•	Use TTL to auto-expire cache
+
+⸻
+
+🚀 Result
+	•	Reduced DB hits
+	•	Faster responses
+	•	Production-level backend optimization
