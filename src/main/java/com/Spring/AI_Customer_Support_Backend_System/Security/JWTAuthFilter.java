@@ -52,10 +52,11 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             //Then we have to extract the JWT token from the header
             //We remove "Bearer " from the string
             String token = header.substring(7);
+            log.debug("JWT token extracted");
             //Then we have to get the userName from the token ---
             //Refer to the getUserNamefromToken method in AuthUtil
             String username = authUtil.getUserNamefromToken(token);
-
+            log.debug("Username extracted from token: {}", username);
             //If the username is not null and the SecurityContextHolder doesnt have an user ---- then we proceed to check for the user
             //After getting the user from the database we create a UsernamePasswordAuthenticationToken --- using the User object
             //We then set the SecurtiyContextHolder with the userToken created ----
@@ -67,6 +68,8 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 //So that we can know about the user roles from the JWT and allow role based access --
                 UsernamePasswordAuthenticationToken userToken = new UsernamePasswordAuthenticationToken(user,null,user.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(userToken);
+
+                log.info("User authenticated successfully: {}", username);
             }
 
             //If the next filter also sees the SecurityContextHolder has a userToken --- then it passes and goes on to the next Filter
@@ -74,6 +77,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         }
         catch(Exception e)  {
             //we send the request, response, handler and the exception objects
+            log.error("Error occurred in JWTAuthFilter: {}", e.getMessage(), e);
             handlerExceptionResolver.resolveException(request,response,null,e);
         }
 

@@ -486,3 +486,24 @@ GET /agents/me/tickets
 	•	Reduced DB hits
 	•	Faster responses
 	•	Production-level backend optimization
+
+
+After completing the core APIs and authentication system, the first major improvement was implementing Global Exception Handling using @RestControllerAdvice. This allowed all exceptions across the application to be handled centrally instead of scattering try-catch blocks everywhere. You created a structured response (ApiError) containing timestamp, error message, and HTTP status. Different exceptions like IllegalArgumentException, AccessDeniedException, AuthenticationException, etc., were mapped to appropriate HTTP status codes such as 400, 401, 403, 404, and 409. This ensured that every API returns clean, consistent, and predictable error responses, which is a key requirement in real-world backend systems.
+
+After that, you introduced Validation using Bean Validation (Jakarta Validation) to ensure that invalid data never reaches your business logic. Instead of manually checking inputs, you added annotations like @NotBlank, @Email, @Size, etc., directly in your DTO classes. Then, you used @Valid in controller methods so that validation is triggered automatically. Any validation failure is handled by your Global Exception Handler (MethodArgumentNotValidException), ensuring that invalid requests are rejected early with proper error messages. This significantly improved data integrity and API reliability.
+
+Next, you implemented Logging across the application, which is essential for debugging and monitoring in production. You added logging in all major layers:
+	•	JWTAuthFilter → logs incoming requests and authentication flow
+	•	AuthService → logs registration, login, and OAuth2 events
+	•	TicketService → logs ticket creation, assignment, updates, and search operations
+	•	MessageService → logs message sending, fetching, and unauthorized access
+
+You used proper log levels:
+	•	info → normal operations (API usage, success flow)
+	•	warn → suspicious or unauthorized attempts
+	•	error → failures (invalid data, missing entities)
+	•	debug → internal insights (counts, deeper tracing)
+
+This gave your backend full observability, meaning you can trace user actions, debug issues, and monitor system behavior effectively.
+
+All these improvements were integrated smoothly with your existing system, including JWT + OAuth2 authentication, role-based access control, and Redis caching. Exception handling, validation, logging, and caching now work together without conflicts, making your backend clean, efficient, and production-ready.

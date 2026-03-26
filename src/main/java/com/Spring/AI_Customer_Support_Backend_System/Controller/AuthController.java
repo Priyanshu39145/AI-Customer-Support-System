@@ -5,6 +5,7 @@ import com.Spring.AI_Customer_Support_Backend_System.DTO.LoginResponseDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterRequestDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterResponseDTO;
 import com.Spring.AI_Customer_Support_Backend_System.Services.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,12 +19,12 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponseDTO> register(@RequestBody RegisterRequestDTO registerRequestDTO) {
+    public ResponseEntity<RegisterResponseDTO> register(@Valid @RequestBody RegisterRequestDTO registerRequestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(registerRequestDTO));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequestDTO)    {
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO)    {
         return ResponseEntity.ok(authService.login(loginRequestDTO));
     }
 

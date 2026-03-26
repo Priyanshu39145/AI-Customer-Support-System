@@ -11,6 +11,7 @@ import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository
 import com.Spring.AI_Customer_Support_Backend_System.Security.AuthUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -36,11 +38,14 @@ public class AuthService {
     private final AuthUtil authUtil;
 
     public RegisterResponseDTO register(RegisterRequestDTO registerRequestDTO) {
-
+        log.info("Register attempt for email: {}", registerRequestDTO.getEmail());
         User user = userRepository.findByEmail(registerRequestDTO.getEmail()).orElse(null);
 
-        if(user!=null)
+        if(user!=null)  {
+            log.warn("Registration failed - user already exists: {}", registerRequestDTO.getEmail());
             throw new IllegalArgumentException("User already exists");
+        }
+
 
         User newuser = User.builder()
                 .email(registerRequestDTO.getEmail())
@@ -52,12 +57,13 @@ public class AuthService {
                 .build();
 
         userRepository.save(newuser);
-
+        log.info("User registered successfully: {}", newuser.getEmail());
         return modelMapper.map(newuser, RegisterResponseDTO.class);
     }
 
 
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
+        log.info("Login attempt for email: {}", loginRequestDTO.getEmail());
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequestDTO.getEmail() , loginRequestDTO.getPassword())
         );
@@ -65,17 +71,21 @@ public class AuthService {
         User user = (User) authentication.getPrincipal();
 
         String token = authUtil.generateAccessToken(user);
+        log.info("Login successful for user: {}", user.getEmail());
         return new LoginResponseDTO(user.getEmail() , user.getRole() , token);
     }
 
     @Transactional
     public ResponseEntity<LoginResponseDTO> handleOAuth2loginrequest(OAuth2User oAuth2User, String registrationId) {
+        log.info("OAuth2 login attempt via provider: {}", registrationId);
         //Remember first set AuthProviderType and providerId in User Entity ---
         //First fetch provider Type and provider ID --- the method --- to get the AuthProviderType and providerId from registration Id is in AuthUTIL --- refer there
         ProviderType authProviderType = authUtil.getAuthProviderTypeFromRegistrationID(registrationId);
         String providerId = authUtil.getProviderIdFromOAuthUser(oAuth2User,registrationId);
+
         //We can also get the name of the USer from the attributes ---
         String name = oAuth2User.getAttribute("name");
+        log.debug("OAuth2 providerId: {}", providerId);
 
         //First we have to find the User using the ProviderId and ProviderType ----
         User user1 = (User) userRepository.findByProviderIdAndProviderType(providerId,authProviderType).orElse(null);
@@ -83,6 +93,7 @@ public class AuthService {
         //oAuth --- gives us option to fetch the email of the user ---
         String email = oAuth2User.getAttribute("email");
         if(email == null || email.isBlank()) {
+            log.error("OAuth2 login failed - email not provided");
             throw new IllegalArgumentException("Email not provided by OAuth provider");
         }
         //Using this email we will fetch the user from the database ---- inside the database we are usually storing email inside the username attribute ----- however if we dont get email --- then we store other things --- consider email is store inside the username attribute ---
@@ -90,7 +101,7 @@ public class AuthService {
 
         //Now if both the user1 and user2 is null then we are sure that the user is not in the database and we need to signup that user
         if(user1==null && user2==null)  {
-            ;
+            log.info("OAuth2 new user detected. Registering: {}", email);
             //We use the signupReturningUser method which returns a User(Conventional signup method gives us the SignUpResponseDTO --- so to get the user object from it we make another method here which returns the User directly) --- and requires an LoginRequestDTO consisting of username and password --- password is set to null ---- as oAuth2 doesnt require passwords ---
             //Now since there are two more ---- attributes in User --- providerId and providerType --- so we have to also send them to the signup method to set to the User
             //During addition of Role Based access --- since we are associating the User with Patient --- we need a SignupRequestDTO ---- containing the Patient not nullable info too ---- so we configure SignUpRequestDTO here instead of LoginRequestDTO
@@ -102,6 +113,7 @@ public class AuthService {
         //See the above findUserNameFromoAuthUser code ---- There we have saved the username with different fields if we didnt get the email ---- So we need to set the username with email here ---
         else if(user1!=null)    {
             if(email!=null && !email.isBlank() && !email.equals(user1.getUsername()))   {
+                log.info("Updating email for OAuth2 user: {}", email);
                 user1.setEmail(email);
                 userRepository.save(user1);
             }
@@ -112,7 +124,7 @@ public class AuthService {
 //        else {
 //            throw new BadCredentialsException("This email is already registered with the provider");
 //        }
-
+        log.info("OAuth2 login successful for user: {}", email);
         //Now we have to log in the user by sending a LoginResponseDTO ---- It requires the JWT and the userId
         LoginResponseDTO loginResponseDTO = new LoginResponseDTO(user1.getEmail(), user1.getRole(), authUtil.generateAccessToken(user1));
 
@@ -133,9 +145,12 @@ public class AuthService {
     }
 
     private User registerByOAuth2(String name, String email, String providerId, ProviderType authProviderType) {
+        log.debug("Registering OAuth2 user: {}", email);
         User user = userRepository.findByEmail(email).orElse(null);
-        if(user!=null)
-            throw  new IllegalArgumentException("User already exists");
+        if(user!=null) {
+            log.warn("OAuth2 registration failed - user already exists: {}", email);
+            throw new IllegalArgumentException("User already exists");
+        }
 
         User newUser = User.builder()
                 .name(name)
@@ -148,6 +163,7 @@ public class AuthService {
                 .build();
 
         userRepository.save(newUser);
+        log.info("OAuth2 user registered successfully: {}", email);
         return newUser;
 
     }

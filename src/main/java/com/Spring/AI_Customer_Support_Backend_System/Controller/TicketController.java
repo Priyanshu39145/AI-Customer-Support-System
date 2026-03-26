@@ -8,6 +8,7 @@ import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
 import com.Spring.AI_Customer_Support_Backend_System.Services.TicketService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.Response;
 import org.springframework.data.domain.Page;
@@ -27,7 +28,7 @@ public class TicketController {
 
     @PostMapping("/tickets")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<CreateTicketResponseDTO> createTicket(@RequestParam String userId, @RequestBody CreateTicketRequestDTO requestDTO) {
+    public ResponseEntity<CreateTicketResponseDTO> createTicket(@RequestParam String userId, @Valid @RequestBody CreateTicketRequestDTO requestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(userId,requestDTO));
     }
 

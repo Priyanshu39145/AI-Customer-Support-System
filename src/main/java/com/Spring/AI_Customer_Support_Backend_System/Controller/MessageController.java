@@ -4,6 +4,7 @@ import com.Spring.AI_Customer_Support_Backend_System.DTO.MessageRequestDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.MessageResponseDTO;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
 import com.Spring.AI_Customer_Support_Backend_System.Services.MessageService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class MessageController {
     private final MessageService messageService;
 
     @PostMapping("/tickets/{ticketId}/messages")
-    public ResponseEntity<MessageResponseDTO> sendMessage(@PathVariable String ticketId, @RequestBody MessageRequestDTO messageRequestDTO)  {
+    public ResponseEntity<MessageResponseDTO> sendMessage(@PathVariable String ticketId, @Valid @RequestBody MessageRequestDTO messageRequestDTO)  {
         //This statement gives us all the details of the current user including the role ---
         //We have to set /doctors as request matchers to only roles containing doctor ---
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
