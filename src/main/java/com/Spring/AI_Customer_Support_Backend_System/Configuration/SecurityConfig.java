@@ -1,6 +1,7 @@
 package com.Spring.AI_Customer_Support_Backend_System.Configuration;
 
 import com.Spring.AI_Customer_Support_Backend_System.Security.JWTAuthFilter;
+import com.Spring.AI_Customer_Support_Backend_System.Services.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -20,6 +21,7 @@ public class SecurityConfig {
     private final JWTAuthFilter jwtAuthFilter;
     private final oAuth2SuccessHandler oauth2successHandler;
     private final HandlerExceptionResolver handlerExceptionResolver;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception  {
@@ -41,6 +43,8 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 //Added jwtAuthFilter to the SecurityFilterChain before the UsernamePasswordAuthenticationFilter
+                //Also added RateLimitFilter before jwtAuthFilter
+                .addFilterBefore(rateLimitFilter, JWTAuthFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 //We add the oAuth2Login configuration and set its failure and success handlers ---
                 //Failure handler just gives us an error log
