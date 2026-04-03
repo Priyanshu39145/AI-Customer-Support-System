@@ -33,7 +33,7 @@ public class SecurityConfig {
                 //We have allowed auth and login endpoints full permission
                 //We have authenticated all others
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/login/**").permitAll()
+                        .requestMatchers("/auth/**", "/login/**","/ai/**").permitAll()
                         .requestMatchers("/tickets/{ticketId}/assign").hasRole("ADMIN")
                         .requestMatchers("/tickets/{ticketId}/status").hasRole("AGENT")
                         .requestMatchers("/tickets/**").authenticated()
@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 //Added jwtAuthFilter to the SecurityFilterChain before the UsernamePasswordAuthenticationFilter
                 //Also added RateLimitFilter before jwtAuthFilter
-                .addFilterBefore(rateLimitFilter, JWTAuthFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 //We add the oAuth2Login configuration and set its failure and success handlers ---
                 //Failure handler just gives us an error log
