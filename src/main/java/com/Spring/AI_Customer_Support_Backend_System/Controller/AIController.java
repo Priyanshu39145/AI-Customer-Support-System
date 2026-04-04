@@ -1,5 +1,6 @@
 package com.Spring.AI_Customer_Support_Backend_System.Controller;
 
+import com.Spring.AI_Customer_Support_Backend_System.DTO.AIResponse;
 import com.Spring.AI_Customer_Support_Backend_System.Services.AIService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +16,7 @@ public class AIController {
     private final AIService aiService;
 
     @GetMapping("/test")
-    public String test(@RequestParam String message) {
+    public AIResponse test(@RequestParam String message) {
         return aiService.askAI(message);
     }
 }
