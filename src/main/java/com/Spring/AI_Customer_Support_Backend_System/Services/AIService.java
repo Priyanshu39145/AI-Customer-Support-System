@@ -28,22 +28,33 @@ public class AIService {
         return response;
     }
 
-    public Conversation getOrCreateConversation(String userId, String chatId)   {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Conversation conversation = conversationRepository.findByUserAndChatIdOrderByTimestampAsc(userId,chatId);
+    public AIResponse askAIWithHistory(String message, StringBuilder history) {
+        String sys = "You are an intelligent AI customer support assistant designed to help users resolve their queries efficiently and conversationally. "
+                + "You must carefully understand the user’s intent using both the current message and the provided conversation history, and respond in a clear, helpful, and professional manner. "
+                + "Always maintain context from previous messages to ensure continuity in the conversation. "
+                + "If the user’s issue can be resolved directly, provide a precise and actionable solution. "
+                + "If the issue is unclear, ask relevant follow-up questions. "
+                + "If the request indicates frustration, urgency, or a problem that cannot be resolved through automated assistance, you should recognize this and prepare to escalate by suggesting ticket creation. "
+                + "Keep responses concise but informative, avoid unnecessary verbosity, and ensure a natural, human-like conversational tone.\n\n"
+                + "Conversation History:\n"
+                + history + "\n\n";
+        String content = chatClient.prompt()
+                .system(sys)
+                .user(message)
+                .call()
+                .content();
 
-        if(conversation!=null)
-            return conversation;
+        return new AIResponse(message, content, LocalDateTime.now());
+    }
 
-        Conversation conversation1 = Conversation.builder()
-                .user(user)
-                .chatId(chatId)
-                .build();
+    public String generateTitle(String message) {
 
-        conversationRepository.save(conversation1);
+        String prompt = "Summarize this customer query in 3-4 words only, no extra text:\n" + message;
 
-        return conversation1;
+        return chatClient.prompt()
+                .user(prompt)
+                .call()
+                .content();
     }
 }
