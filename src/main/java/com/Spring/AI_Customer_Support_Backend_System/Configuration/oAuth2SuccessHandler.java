@@ -37,6 +37,7 @@ public class oAuth2SuccessHandler implements AuthenticationSuccessHandler {
         //We will handle the login using this method in AuthService ---
 
         //IMP Method ---
+        //We send the oAuth2User from the login page and the registrationid received to the handleOAuth2loginRequest method
         ResponseEntity<LoginResponseDTO> loginResponse = authService.handleOAuth2loginrequest(oAuth2User,registrationId);
 
         //Now since we have got the LoginResponseDTO ---- we can configure the http response object to view the response

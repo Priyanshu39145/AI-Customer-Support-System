@@ -1,5 +1,6 @@
 package com.Spring.AI_Customer_Support_Backend_System.Entities;
 
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.CategoryType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.ProviderType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -14,7 +15,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "users") //Provided as user is default table in many areas
@@ -37,6 +40,13 @@ public class User implements UserDetails {
     private String password;
     @Enumerated(EnumType.STRING)
     private RoleType role;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_expertise", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false)
+    @Builder.Default
+    private Set<CategoryType> expertise = new HashSet<>();
 
     private boolean enabled;
 
@@ -73,6 +83,7 @@ public class User implements UserDetails {
 
     // Defines the username used for login.
     // Here, email is used as the username instead of a separate username field.
+    //We override the getUsername method of UserDetails interface to make it give Email whenever username is asked ---
     @Override
     public String getUsername() {
         return getEmail();

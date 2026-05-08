@@ -18,6 +18,7 @@ public class AuthController {
 
     private final AuthService authService;
 
+    //From here user registers using Email and password and name ---
     @PostMapping("/register")
     public ResponseEntity<RegisterResponseDTO> register(@Valid @RequestBody RegisterRequestDTO registerRequestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(registerRequestDTO));

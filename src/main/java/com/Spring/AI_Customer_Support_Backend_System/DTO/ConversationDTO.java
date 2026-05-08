@@ -5,10 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ConversationDTO {
+public class ConversationDTO implements Serializable {
 
     private String conversationId;
     private String conversationTitle;

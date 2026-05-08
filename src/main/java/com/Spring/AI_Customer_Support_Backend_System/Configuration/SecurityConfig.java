@@ -28,15 +28,19 @@ public class SecurityConfig {
         httpSecurity
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 //We have allowed auth and login endpoints full permission
                 //We have authenticated all others
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/login/**","/ai/**").permitAll()
+                        .requestMatchers("/auth/**", "/login/**" ).permitAll()
+                        .requestMatchers("/conversations/**", "/messages/**").hasRole("USER")
+                        .requestMatchers("/agents/{agentId}/categories" , "/upload").hasRole("ADMIN")
                         .requestMatchers("/tickets/{ticketId}/assign").hasRole("ADMIN")
                         .requestMatchers("/tickets/{ticketId}/status").hasRole("AGENT")
-                        .requestMatchers("/tickets/**").authenticated()
+                        .requestMatchers("/tickets/{ticketId}/priority").hasAnyRole("AGENT", "ADMIN")
+                        .requestMatchers("/tickets/{ticketId}/category").hasAnyRole("AGENT", "ADMIN")
+//                        .requestMatchers("/tickets/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 //Disables form login

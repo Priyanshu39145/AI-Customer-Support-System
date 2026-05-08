@@ -1,13 +1,14 @@
 package com.Spring.AI_Customer_Support_Backend_System.Services;
 
 import com.Spring.AI_Customer_Support_Backend_System.DTO.*;
-import com.Spring.AI_Customer_Support_Backend_System.Entities.Message;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Conversation;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Ticket;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.ActionType;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.CategoryType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
-import com.Spring.AI_Customer_Support_Backend_System.Repositories.MessageRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository;
 import jakarta.transaction.Transactional;
@@ -15,16 +16,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -33,75 +35,71 @@ public class TicketService {
 
     private final UserRepository userRepository;
     private final TicketRepository ticketRepository;
-    private final MessageRepository messageRepository;
+//    private final MessageRepository messageRepository;
     private final ModelMapper modelMapper;
 
+    private final EmailServices emailServices;
+
+    private final TicketActivityService ticketActivityService;
+
+
+//
     //This will update the values in all existing cache keys --
+    //Here we create a ticket using the given user and a create request d uh create ticket request DTO
+// which consists title and description. These are the required required fields and also a conversation.
+// Conversation will remain null for the user manually creating a ticket.
     @Caching(evict = {
-            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #user.id"),
-            @CacheEvict(value = "ticketsList", allEntries = true),
-            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
-            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
-            @CacheEvict(value = "searchticketsList", allEntries = true)
+            @CacheEvict(value = "searchticketsList", allEntries = true),
+            @CacheEvict(value = "tickets", allEntries = true)
     })
-    public CreateTicketResponseDTO createTicket(String userId, CreateTicketRequestDTO requestDTO)    {
-        log.info("Creating ticket for userId: {}", userId);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    @Transactional
+    public CreateTicketResponseDTO createTicket(User user, CreateTicketRequestDTO requestDTO, Conversation conversation, PriorityType priority, CategoryType category)    {
+        log.info("Creating ticket for userId: {}", user.getId());
+        if(conversation != null && conversation.getTicket() != null) {
+            throw new IllegalArgumentException("Conversation already has a ticket");
+        }
+
+        PriorityType resolvedPriority = priority != null ? priority : PriorityType.MEDIUM;
+        CategoryType resolvedCategory = category != null ? category : CategoryType.GENERAL;
+
+        User agent = findLeastLoadedAgentByCategory(resolvedCategory);
 
         Ticket ticket = Ticket.builder()
                 .title(requestDTO.getTitle())
                 .description(requestDTO.getDescription())
                 .status(StatusType.OPEN)
-                .priority(requestDTO.getPriority() != null ? requestDTO.getPriority() : PriorityType.MEDIUM)
+                .priority(resolvedPriority)
+                .category(resolvedCategory)
+                .conversation(conversation)
                 .createdBy(user)
+                .assignedTo(agent)
                 .build();
         ticketRepository.save(ticket);
+        if(conversation != null) {
+            conversation.setTicket(ticket);
+        }
+        ticketActivityService.logActivity(ticket, user, ActionType.CREATED, null, ticket.getId());
+        if(agent != null) {
+            ticketActivityService.logActivity(ticket, user, ActionType.ASSIGNED, null, formatUserActivityValue(agent));
+        }
         log.info("Ticket created successfully with id: {}", ticket.getId());
         return modelMapper.map(ticket , CreateTicketResponseDTO.class);
     }
 
-
-    @Cacheable(value = "ticketsList", key = "#page + '-' + #size + '-' + #status + '-' + #priority")//Here we cache the output of this request using the parameters value as key ----
-    public Page<TicketResponseDTO> getTicketByStatusAndPriority(StatusType status, PriorityType priority, int page, int size) {
-        log.info("Fetching tickets list | page: {}, size: {}, status: {}, priority: {}", page, size, status, priority);
-        Page<Ticket> tickets;
-        Pageable pageable = PageRequest.of(page,size);
-        if(status==null && priority==null)
-            tickets = ticketRepository.findAll(pageable);
-        else if (status==null) {
-            tickets = ticketRepository.findByPriority(priority,pageable);
-        }
-        else if (priority==null)    {
-            tickets = ticketRepository.findByStatus(status,pageable);
-        }
-        else
-            tickets = ticketRepository.findByStatusAndPriority(status,priority,pageable);
-
-        log.debug("Fetched {} tickets", tickets.getTotalElements());
-
-        return tickets.map(ticket -> {
-            TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
-            dto.setCreatedById(
-                    ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null
-            );
-            dto.setAssignedToId(
-                    ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
-            );
-            return dto;
-        });
-    }
-
+//
     @Transactional
     @Caching(evict = {
-            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #agentId"),
-            @CacheEvict(value = "ticketsList", allEntries = true),
-            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
-            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
-            @CacheEvict(value = "searchticketsList", allEntries = true)
+            @CacheEvict(value = "tickets", allEntries = true),
+            @CacheEvict(value = "searchticketsList", allEntries = true),
+            @CacheEvict(value = "ticketComments", allEntries = true),
+            @CacheEvict(value = "ticketHistory", key = "#ticketId")
     })
-    public TicketResponseDTO assignTicket(String ticketId, String agentId) {
+    public TicketResponseDTO assignTicket(User user, String ticketId, String agentId) {
         log.info("Assigning ticket {} to agent {}", ticketId, agentId);
+        if (user == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
+
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() ->{
             log.error("Ticket not found: {}", ticketId);
             return new IllegalArgumentException("Ticket Not found");});
@@ -117,11 +115,18 @@ public class TicketService {
             throw new IllegalArgumentException("User is not an Agent");
         }
 
+        User previousAgent = ticket.getAssignedTo();
         ticket.setAssignedTo(agent);
+        ticketRepository.save(ticket);
+        ticketActivityService.logActivity(
+                ticket,
+                user,
+                ActionType.ASSIGNED,
+                formatUserActivityValue(previousAgent),
+                formatUserActivityValue(agent)
+        );
 
-        ticket.setStatus(StatusType.IN_PROGRESS);
-
-        log.info("Ticket {} assigned successfully", ticketId);
+        log.info("Ticket {} assigned successfully to agent {}", ticketId, agentId);
 
         TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
         dto.setCreatedById(
@@ -133,26 +138,41 @@ public class TicketService {
         return dto;
     }
 
-
-    @Transactional
+//
+//    @Transactional
+//    @Caching(evict = {
+//            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #status"),
+//            @CacheEvict(value = "ticketsList", allEntries = true),
+//            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
+//            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
+//            @CacheEvict(value = "searchticketsList", allEntries = true)
+//    })
     @Caching(evict = {
-            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #status"),
-            @CacheEvict(value = "ticketsList", allEntries = true),
-            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
-            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
-            @CacheEvict(value = "searchticketsList", allEntries = true)
+            @CacheEvict(value = "searchticketsList", allEntries = true),
+            @CacheEvict(value = "tickets", allEntries = true),
+            @CacheEvict(value = "ticketHistory", key = "#ticketId")
     })
-    public TicketResponseDTO changeStatus(String ticketId, StatusType status) {
+    @Transactional
+    public TicketResponseDTO changeStatus(User user, String ticketId, StatusType status) {
         log.info("Changing status of ticket {} to {}", ticketId, status);
+
+        if (user == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
+
+        if (status == null) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> {
                     log.error("Ticket not found: {}", ticketId);
                     return new IllegalArgumentException("Ticket Not found");
                 });
 
-        if(ticket.getAssignedTo() == null) {
+        if(ticket.getAssignedTo() == null || !ticket.getAssignedTo().getId().equals(user.getId())) {
             log.warn("Ticket {} has no assigned agent", ticketId);
-            throw new IllegalArgumentException("Ticket is not assigned to any agent");
+            throw new AccessDeniedException("Ticket is not assigned to this agent");
         }
 
         StatusType currentStatus = ticket.getStatus();
@@ -170,8 +190,22 @@ public class TicketService {
         }
 
         ticket.setStatus(status);
+        ticket.setUpdatedAt(LocalDateTime.now());
+        ticketRepository.save(ticket);
+        ticketActivityService.logActivity(
+                ticket,
+                user,
+                ActionType.STATUS_CHANGED,
+                currentStatus != null ? currentStatus.name() : null,
+                status.name()
+        );
 
         log.info("Ticket {} status updated successfully", ticketId);
+
+
+        if(ticket.getStatus()==StatusType.CLOSED)
+            emailServices.sendEmail(ticket);
+
 
         TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
         dto.setCreatedById(
@@ -184,100 +218,318 @@ public class TicketService {
 
     }
 
-    @Cacheable(value = "tickets", key = "#ticketId + '-' + #user.id") //Here we store the Cache with the ticketId and userId as the key -- Here user.id automatically gets the Id using the user.getId method
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "searchticketsList", allEntries = true),
+            @CacheEvict(value = "tickets", allEntries = true),
+            @CacheEvict(value = "ticketHistory", key = "#ticketId")
+    })
+    public TicketResponseDTO changePriority(User user, String ticketId, PriorityType priority) {
+        log.info("Changing priority of ticket {} to {}", ticketId, priority);
+
+        if (user == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
+
+        if (priority == null) {
+            throw new IllegalArgumentException("Priority is required");
+        }
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> {
+                    log.error("Ticket not found: {}", ticketId);
+                    return new IllegalArgumentException("Ticket Not found");
+                });
+
+        validateAgentOrAdminCanMutateTicket(user, ticket);
+
+        PriorityType oldPriority = ticket.getPriority();
+        ticket.setPriority(priority);
+        ticket.setUpdatedAt(LocalDateTime.now());
+        ticketRepository.save(ticket);
+        ticketActivityService.logActivity(
+                ticket,
+                user,
+                ActionType.PRIORITY_CHANGED,
+                oldPriority != null ? oldPriority.name() : null,
+                priority.name()
+        );
+
+        log.info("Ticket {} priority updated successfully", ticketId);
+
+        TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
+        dto.setCreatedById(
+                ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null
+        );
+        dto.setAssignedToId(
+                ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
+        );
+        return dto;
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "searchticketsList", allEntries = true),
+            @CacheEvict(value = "tickets", allEntries = true),
+            @CacheEvict(value = "ticketHistory", key = "#ticketId")
+    })
+    public TicketResponseDTO changeCategory(User user, String ticketId, CategoryType category) {
+        log.info("Changing category of ticket {} to {}", ticketId, category);
+
+        if (user == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
+
+        if (category == null) {
+            throw new IllegalArgumentException("Category is required");
+        }
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> {
+                    log.error("Ticket not found: {}", ticketId);
+                    return new IllegalArgumentException("Ticket Not found");
+                });
+
+        validateAgentOrAdminCanMutateTicket(user, ticket);
+
+        CategoryType oldCategory = ticket.getCategory();
+        User previousAgent = ticket.getAssignedTo();
+        ticket.setCategory(category);
+
+        if(ticket.getStatus()==StatusType.OPEN) {
+            User newAgent = findLeastLoadedAgentByCategory(category);
+
+            if (previousAgent == null || !newAgent.getId().equals(previousAgent.getId())) {
+                ticket.setAssignedTo(newAgent);
+            }
+        }
+
+        ticket.setUpdatedAt(LocalDateTime.now());
+        ticketRepository.save(ticket);
+        ticketActivityService.logActivity(
+                ticket,
+                user,
+                ActionType.CATEGORY_CHANGED,
+                oldCategory != null ? oldCategory.name() : null,
+                category.name()
+        );
+
+        User currentAgent = ticket.getAssignedTo();
+        if (!Objects.equals(
+                previousAgent != null ? previousAgent.getId() : null,
+                currentAgent != null ? currentAgent.getId() : null
+        )) {
+            ticketActivityService.logActivity(
+                    ticket,
+                    user,
+                    ActionType.ASSIGNED,
+                    formatUserActivityValue(previousAgent),
+                    formatUserActivityValue(currentAgent)
+            );
+        }
+
+        log.info("Ticket {} category updated successfully", ticketId);
+        return mapToTicketResponseDTO(ticket);
+    }
+//
+    @Cacheable(value = "tickets", key = "#ticketId + '-' + #user.id")
     public TicketDetailedResponseDTO getTicketById(String ticketId, User user) {
+
+        if (user == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
+
         log.info("Fetching ticket details for ticketId: {} by user: {}", ticketId, user.getId());
-        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
-        if(ticket==null || user==null) {
-            log.error("Ticket/User not found. ticketId: {}, userId: {}", ticketId, user != null ? user.getId() : null);
-            throw new IllegalArgumentException("User or Ticket doesnt exist");
-        }
-        else if(
-                !user.getId().equals(ticket.getCreatedBy().getId()) &&
-                        (ticket.getAssignedTo() == null ||
-                                !user.getId().equals(ticket.getAssignedTo().getId()))
-        ) {
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+
+        if (!user.getId().equals(ticket.getCreatedBy().getId()) &&
+                (ticket.getAssignedTo() == null ||
+                        !user.getId().equals(ticket.getAssignedTo().getId()))) {
+
             log.warn("Unauthorized access to ticket {} by user {}", ticketId, user.getId());
-            throw new IllegalArgumentException("This User is not allowed in this chat");
+            throw new AccessDeniedException("Not allowed");
         }
 
-        //We are fetching messages directly from ticket --- Lazy Fetch applied ---
-        //We are fetching messages direct by message repository ---
-        List<Message> messages = messageRepository.findByTicketOrderByCreatedAtAsc(ticket);
+        String conversationId = ticket.getConversation() != null
+                ? ticket.getConversation().getId()
+                : null;
 
-        log.debug("Fetched {} messages for ticket {}", messages.size(), ticketId);
+        String assignedToId = ticket.getAssignedTo() != null
+                ? ticket.getAssignedTo().getId()
+                : null;
 
-        List<MessageResponseDTO> messageDTOs = messages.stream().map(message -> new MessageResponseDTO(message.getId(), message.getContent(), message.getSender().getId(), message.getCreatedAt())).toList();
-
-        return new
-                TicketDetailedResponseDTO(ticketId,ticket.getTitle(),ticket.getDescription(),ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId(),messageDTOs);
-
+        return new TicketDetailedResponseDTO(
+                ticketId,
+                ticket.getTitle(),
+                ticket.getDescription(),
+                ticket.getStatus(),
+                ticket.getPriority(),
+                ticket.getCategory(),
+                conversationId,
+                ticket.getCreatedBy().getId(),
+                assignedToId
+        );
     }
 
-    @Cacheable(value = "ticketsListOfUser", key = "#page + '-' + #size + '-' + #status + '-' + #priority + '-' + #user.id")
-    public Page<TicketResponseDTO> getTicketsOfUser(User user, StatusType status, PriorityType priority, int page, int size) {
-        log.info("Fetching USER tickets for userId: {}", user.getId());
-        Pageable pageable = PageRequest.of(page,size);
-
-        Page<Ticket> tickets;
-
-        if(status==null && priority==null)
-            tickets = ticketRepository.findByCreatedBy(user,pageable);
-        else if(status==null)
-            tickets = ticketRepository.findByCreatedByAndPriority(user,priority,pageable);
-        else if(priority==null)
-            tickets = ticketRepository.findByCreatedByAndStatus(user,status,pageable);
-        else
-            tickets = ticketRepository.findByCreatedByAndStatusAndPriority(user,status,priority,pageable);
-
-        Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
-        return ticketDTOs;
-    }
-    @Cacheable(value = "ticketsListOfAgent", key = "#page + '-' + #size + '-' + #status + '-' + #priority + '-' + #user.id")
-    public Page<TicketResponseDTO> getTicketsOfAgent(User user, StatusType status, PriorityType priority, int page, int size) {
-        log.info("Fetching AGENT tickets for agentId: {}", user.getId());
-        Pageable pageable = PageRequest.of(page,size);
-
-        Page<Ticket> tickets;
-
-        if(status==null && priority==null)
-            tickets = ticketRepository.findByAssignedTo(user,pageable);
-        else if(status==null)
-            tickets = ticketRepository.findByAssignedToAndPriority(user,priority,pageable);
-        else if(priority==null)
-            tickets = ticketRepository.findByAssignedToAndStatus(user,status,pageable);
-        else
-            tickets = ticketRepository.findByAssignedToAndStatusAndPriority(user,status,priority,pageable);
-
-        Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
-        return ticketDTOs;
-    }
-
-    @Cacheable(value = "searchticketsList", key = "#keyword + '-' + #page + '-' + #size + '-' + #status + '-' + #priority + '-' + #user.id")
-    public Page<TicketResponseDTO> searchTickets(User user,String keyword, int page, int size, StatusType status, PriorityType priority) {
-        log.info("Searching tickets | keyword: {}, userId: {}", keyword, user.getId());
-        Pageable pageable = PageRequest.of(page,size);
-        if(user==null || user.getRole()==RoleType.USER) {
-            log.warn("Unauthorized search attempt by user: {}", user != null ? user.getId() : null);
-            throw new IllegalArgumentException("User is not allowed to see");
+    public List<TicketActivityResponseDTO> getTicketHistory(String ticketId, User user) {
+        if (user == null) {
+            throw new AccessDeniedException("Authentication required");
         }
 
-        if(keyword == null || keyword.isBlank()) {
-            // call normal filtering method
-            return getTicketByStatusAndPriority(status, priority, page, size);
+        log.info("Fetching ticket history for ticketId: {} by user: {}", ticketId, user.getId());
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+
+        validateTicketParticipant(ticket, user);
+        return ticketActivityService.getActivitiesForTicket(ticketId);
+    }
+//
+    //This is the search Tickets endpoint ---
+    //HEre we search the tickets on the basis of many filters --- keyword,status,priority, assignedToId, created dates
+    //We have cached it ---- with suitable key ---- the cache is evicted in the createTicket function ---
+    //unless is used for empty pages of content ---- then cache is not kept ----
+    @Cacheable(
+            value = "searchticketsList",
+            key = "#user.id + '-' + #user.role + '-' + (#keyword ?: 'ALL') + '-' + (#status ?: 'ALL') + '-' + (#priority ?: 'ALL') + '-' + (#category ?: 'ALL') + '-' + (#assignedToId ?: 'ALL') + '-' + (#createdFrom ?: 'NA') + '-' + (#createdTo ?: 'NA') + '-' + #page + '-' + #size",
+            unless = "#result == null || #result.content.isEmpty()"
+    )
+    public Page<TicketResponseDTO> getTicketsOfUser(User user,
+                                                    String keyword,
+                                                    StatusType status,
+                                                    PriorityType priority,
+                                                    CategoryType category,
+                                                    String assignedToId,
+                                                    LocalDate createdFrom,
+                                                    LocalDate createdTo,
+                                                    int page,
+                                                    int size) {
+
+        if (user == null) {
+            throw new IllegalArgumentException("Unauthorized");
         }
 
+        if (createdFrom != null && createdTo != null && createdFrom.isAfter(createdTo)) {
+            throw new IllegalArgumentException("Invalid date range");
+        }
+        log.info("Searching tickets belonging to userId: {}", user.getId());
+        Pageable pageable = PageRequest.of(page,size);
+
+        LocalDateTime createdFromDateTime = createdFrom != null ? createdFrom.atStartOfDay() : null;
+        LocalDateTime createdToDateTime = createdTo != null ? createdTo.plusDays(1).atStartOfDay().minusNanos(1) : null;
+        
         Page<Ticket> tickets = null;
-        if(status==null && priority==null)
-            tickets = ticketRepository.searchTickets(keyword,pageable);
-        else if(status==null)
-            tickets = ticketRepository.searchTicketsByPriority(keyword,priority,pageable);
-        else if(priority==null)
-            tickets = ticketRepository.searchTicketsByStatus(keyword,status,pageable);
-        else
-            tickets = ticketRepository.searchTicketsByStatusAndPriority(keyword,status,priority,pageable);
+        //IMP ---- if the role is user --- we send the tickets where createdBy is user
+        //If the role is of AGENT ---- we send the tickets where assignedTo is user
+        //The ticket contains short info ----
+        if(user.getRole()==RoleType.USER)   {
+            tickets = ticketRepository.searchTicketsBelongingToUser(
+                    user,
+                    keyword,
+                    status,
+                    priority,
+                    category,
+                    assignedToId,
+                    createdFromDateTime,
+                    createdToDateTime,
+                    pageable
+            );
+        }
+        else if(user.getRole()==RoleType.AGENT) {
+            tickets = ticketRepository.searchTicketsBelongingToAgent(
+                    user,
+                    keyword,
+                    status,
+                    priority,
+                    category,
+                    assignedToId,
+                    createdFromDateTime,
+                    createdToDateTime,
+                    pageable
+            );
+        }
 
-        Page<TicketResponseDTO> ticketDTOs = tickets.map(ticket -> new TicketResponseDTO(ticket.getId(), ticket.getTitle(), ticket.getStatus(),ticket.getPriority(),ticket.getCreatedBy().getId(),ticket.getAssignedTo().getId()));
-        return ticketDTOs;
+        return tickets.map(this::mapToTicketResponseDTO);
     }
+
+
+    public User findLeastLoadedAgentByCategory(CategoryType category) {
+        List<StatusType> activeStatuses = List.of(StatusType.OPEN, StatusType.IN_PROGRESS);
+        Pageable firstAgent = PageRequest.of(0, 1);
+
+        if(category != null) {
+            List<User> matchingAgents = userRepository.findLeastLoadedAgentsByCategory(
+                    RoleType.AGENT,
+                    category,
+                    activeStatuses,
+                    firstAgent
+            );
+
+            if(!matchingAgents.isEmpty()) {
+                log.info("Assigned ticket category {} to matching agent {}", category, matchingAgents.get(0).getId());
+                return matchingAgents.get(0);
+            }
+
+            log.warn("No agent found with expertise {}. Falling back to least-loaded agent.", category);
+        }
+
+        return userRepository.findLeastLoadedAgents(
+                RoleType.AGENT,
+                activeStatuses,
+                firstAgent
+        ).stream().findFirst().orElseThrow(() -> new RuntimeException("No agents available"));
+    }
+
+    public User findLeastLoadedAgent() {
+        return findLeastLoadedAgentByCategory(null);
+    }
+
+    private void validateAgentOrAdminCanMutateTicket(User user, Ticket ticket) {
+        if(user.getRole() == RoleType.ADMIN) {
+            return;
+        }
+
+        if(user.getRole() == RoleType.AGENT &&
+                ticket.getAssignedTo() != null &&
+                ticket.getAssignedTo().getId().equals(user.getId())) {
+            return;
+        }
+
+        log.warn("User {} with role {} is not allowed to update ticket {}", user.getId(), user.getRole(), ticket.getId());
+        throw new AccessDeniedException("Not allowed to update this ticket");
+    }
+
+    private void validateTicketParticipant(Ticket ticket, User user) {
+        boolean isCreator = ticket.getCreatedBy() != null && user.getId().equals(ticket.getCreatedBy().getId());
+        boolean isAssignedAgent = ticket.getAssignedTo() != null && user.getId().equals(ticket.getAssignedTo().getId());
+
+        if (!isCreator && !isAssignedAgent) {
+            log.warn("Unauthorized ticket history access | ticketId: {}, userId: {}", ticket.getId(), user.getId());
+            throw new AccessDeniedException("Not allowed to access history for this ticket");
+        }
+    }
+
+    private String formatUserActivityValue(User user) {
+        if(user == null) {
+            return null;
+        }
+
+        return user.getId() + " - " + user.getName();
+    }
+
+    private TicketResponseDTO mapToTicketResponseDTO(Ticket ticket) {
+        return new TicketResponseDTO(
+                ticket.getId(),
+                ticket.getTitle(),
+                ticket.getStatus(),
+                ticket.getPriority(),
+                ticket.getCategory(),
+                ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null,
+                ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
+        );
+    }
+
+
 }

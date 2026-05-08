@@ -1,0 +1,701 @@
+AI Customer Support Backend System ----
+
+First we have created the register endpoint for the users who wish to register using Email and password and not with oAuth2 ---- see the register endpoint inside AuthController and the register method inside the AuthService ----
+
+Then we have made the login endpoint which logs in the user using only the email and password of the user ---- see the login endpoint inside the AuthController and the login method inside the AuthService ---- It authenticates by creating a JWT token ---- see the login method inside the AuthService ----
+
+Now every endpoint is authenticated --- and has role based permission ---- and it should have the correct JWT token for it --- On receiving a request ---- every authenticated request goes through a JwtAuthFilter --- go and see it ---- it will check the validity of the JwtToken ----
+
+Now how we handle oAuth2 login? ---
+We have defined a separate endpoint for oAuth2 login --- "/auth/oauth2/authorization"
+Hitting it will take the user towards the oAuth2 login page ---- and then will take their credentials ---- We have a failure and successHandler for the oAuth2 login ---- every logic is in the oAuth2SuccessHandler class ---- and the corresponding AuthService class method ---
+At the end we get the JWT token loginResponse
+
+Remember ---- to avoid complications --- we have only allowed the user from oAuth2 to login only from oAuth2 only ---- and the user from login --- can also log in from oAuth2 ----
+
+So logging in and authentication is done ----
+
+First the user goes inside the interface and it will see all its past conversations ---- it is handled by the getConversations endpoint inside the ConversationController ---- It fetches the conversations of the user and gives a list of conversations with their title in order of their latest time ---- Remember only the User can enter here ---- not Agent
+We have also cached this output ---- so that the user can get the response faster -----
+
+Then it goes to any past conversation and on clicking it --- the user sees all the past messages of the conversation ---- It is handled by the getMessages endpoint of the MessageController --- see there ---- and the MessageService class ---- It is also cached --- for faster responses --
+
+Then I have the getTicketsOfUser endpoint --- It will filter the tickets of User whether an User or an Agent --- according to all the factors like title, description, etc etc --- See the TicketController and the TicketService getTicketsOfUser ---- we also have added Caching to it --- according to all the entries --- To update the cache we also have applied Cache Evict in createTicket method -- so that the cache gets updated
+
+Now we have made the createTicket endpoint for the user ----
+The user will give the title and description and then the system will create a ticket for them ---- see the createTicket method inside the TicketService for the implementation ----
+Now this createTicket method is used in 2 cases --- first of all when the user manually creates the ticket for himself --- then we have the conversation as null --- as the user is not in a chat then ---
+Another case is that the user is inside the conversation with the AI and the AI with the escalation detection creates a ticket using a tool, Then we create a ticket, along with the conversation given inside the tool.
+To see the implementation, go into the ticket service and use the create ticket implementation.
+
+
+I have also made the git ticket by ID endpoint for the user, user as in agent or the user role type. They can by using this endpoint. they can see the whole ticket detailed response including everything title, description, created and assigned to everything.See the implementation as follows in ticket service.
+
+
+We have also created the chain status endpoint for the agent. In this endpoint, the agent will convert the status from open to in-progress or in progress to closed. And the necessary changes will be maybe made in the DB. If the if the strategy changes change to from in progress to close, then uh an  email bus will be sent to the user creating the ticket.
+
+Now create a very important feature for my AI customer support back system, which is ticketComments. Comments are done with when there is ongoing conversation between the user and agent the user give a comment corresponding to a ticket only to the agent can give another comment to reply to it. We have made a comment entity which will take care of the comments specific to the user and specific to the ticket, we have made the corresponding JPA repository and the corresponding in points for adding a comment and getting all the comments corresponding to a ticket which can be seen by both user and agent corresponding.
+
+
+We have implemented another feature which is known as ticket assignment manually using the admin. admin can assign tickets manually if the Ai Fails the assignment or the Admin wants another Agent to handle the ticket.
+
+I have also made an endpoint which helps us to change the priority of a ticket manually by a specific agent and also the admin ----
+
+
+Now I have made a big change ---- I have created a smart ticket routing algorithm according to its category ---
+Every ticket will be of a Category --- like Billing, Technical, etc. ---- Each Ticket will have one category ---
+While the Agents can be of multiple categories and expertises ----
+Every ticket is routed smartly to the right agent that is good for this job ----
+
+This was the changes made ----
+Implement a Category-based ticket routing system in my Spring Boot backend: create a CategoryType enum (BILLING, TECHNICAL, GENERAL, DELIVERY, ACCOUNT, etc.) and add it to the Ticket entity using @Enumerated(EnumType.STRING) with DB migration; update all Ticket DTOs (create, response, detailed) to include category; extend the User (agent) entity to support multiple categories using @ElementCollection(fetch = EAGER) with Set<CategoryType> expertise and persist it in a separate table; modify ticket creation logic to determine category using aiService.detectCategory(title, description) with fallback to GENERAL, and update toolService.findLeastLoadedAgent() to findLeastLoadedAgentByCategory(CategoryType category) that returns the least-loaded agent whose expertise contains the category (write a proper JPA query for this); ensure that if no agent matches, fallback to any least-loaded agent; allow AGENT/ADMIN to update ticket category via a new secured endpoint PUT /tickets/{ticketId}/category with proper validation (agents can update only their assigned tickets); update caching logic to evict tickets and searchticketsList when category or assignment changes; ensure all authorization checks are consistent (creator or assigned agent only for access); update repository queries to support filtering by category in searchTicketsBelongingToUser/Agent; write necessary validations, logging, and exception handling (use AccessDeniedException where appropriate); keep everything consistent with existing architecture, DTO mapping, and coding style.
+
+I also made the efficient category assignment system for each agent by the Admin ----
+
+I also handled the changeCategory method where if I change a ticket's category then a new Agent will be assigned to it
+
+I also created an efficient Ticket History feature which tracks all the changes made to the ticket ----
+These were the changes done ---
+Implement a Ticket Activity / Audit Log system in my Spring Boot backend to track every important action on a ticket: create a new TicketActivity entity with fields like id, ticket (ManyToOne), actionType (ENUM: CREATED, STATUS_CHANGED, PRIORITY_CHANGED, CATEGORY_CHANGED, ASSIGNED, COMMENT_ADDED), performedBy (User), oldValue, newValue, and createdAt (@CreationTimestamp); create a corresponding TicketActivityRepository with a method to fetch activities by ticketId ordered by createdAt ASC; add a TicketActivityService with a reusable method logActivity(Ticket ticket, User user, ActionType actionType, String oldValue, String newValue); integrate this logging inside all relevant methods in TicketService and TicketCommentService (createTicket, changeStatus, changePriority, changeCategory, assignTicket, addComment) by capturing old vs new values before mutation; create a TicketActivityResponseDTO to expose clean data (action, performedById, performedByName, oldValue, newValue, timestamp); add a new secured endpoint GET /tickets/{ticketId}/history in TicketController accessible to ticket creator or assigned agent using existing validation logic; optionally add caching (ticketHistory) with eviction whenever ticket is mutated; ensure proper exception handling using AccessDeniedException, consistent logging, and follow existing DTO mapping and architecture patterns in the project.
+
+Now we are gonna check the full chat feature with AI ----
+
+I have made several improvements inside the AI chat flow ---
+First of all --- I have removed the duplicate ticket check from the chat method ----
+These are the other improvements
+
+These are the other improvements
+
+  Highest Priority Improvements
+
+  1. Fix the default fake conversation id
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Controller/ChatController.java:22 sets missing conversationId to "abc-123". This works because ChatService creates a new conversation
+     if not found, but it is misleading. Pass null and let the service explicitly create a new conversation.
+     ------ For this --- if the user doesnt give a conversationId we pass null as conversationId to the chat method --- otherwise we pass the conversation id
+  2. Validate conversation ownership before using an existing conversation
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:179 loads by id only. If a user sends another user’s conversation id, the later getMessages() check may
+     reject it, but the flow should fail earlier and clearly. Use existsByIdAndUserId() or findByIdAndUser.
+     We check if the conversation is of the valid user or not ----
+  3. Make chat transactional
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:177 saves the user message before the AI call. If the AI call fails, the conversation has a user message
+     with no AI response. Decide intentionally: either wrap DB writes in a transaction, or keep the user message and save a fallback AI error response.
+     Since chat makes new changes in DB we make the method transactional ---
+  4. Fix cache eviction key bug for AI messages
+     src/main/java/com/Spring/AI-Customer-Support-Backend-System/src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/MessageService.java:108 evicts using #sender.id, but sender is a
+     User. That part is fine. The bigger issue is that every message, including AI messages, is stored with the logged-in user as senderUser, so history displays the same user id for both user and
+     AI messages at src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:232. History should show USER: / AI: using SenderType, not user id.
+  5. Do not send unlimited full chat history to the model
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:211 loads all messages. This will become slow, expensive, and may exceed context length. Use last N
+     messages plus a running conversation summary.
+  7. Make tool results user-friendly and deterministic
+     When createSupportTicket is called, src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:196 prepends “Your issue is already escalated” and appends model
+     output. Better response: “I created ticket <id> with priority <priority>.” Use the actual tool result instead of relying on model text.
+  8. Use the priority argument passed by the model
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:73 accepts priority but ignores it. Then TicketService calls the AI again at src/main/java/com/Spring/
+     AI_Customer_Support_Backend_System/Services/TicketService.java:67. Either trust the tool argument after validation or remove it from the tool contract.
+  10. Handle duplicate ticket errors inside the tool
+     ticketService.createTicket() can throw "Similar active ticket already exists" at src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/TicketService.java:60. If the tool throws,
+     the chat may fail instead of telling the user that an active ticket already exists. Catch this in createSupportTicket() and return a structured duplicate-ticket response.
+     We handle the tool response --- What we do that we keep returnDirect true in the createSupportTicket tool --- and then inside the chat we check if the tool is used from the ChatResponse object --- if the tool is used --- we return what is returned directly from the tool --- otherwise we return what the AI generated String content is ----
+
+  AI Quality Improvements
+
+  11. Replace keyword-only frustration detection
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:237 is a good start, but misses many cases and overcounts exact phrases. Use a small classifier or
+     structured model output for sentiment, urgency, and escalation intent.
+     We replace the keyword only frustration detection ---- and we thus give the job entirely to AI to decide whether the user is frustrated or not ---- using system prompts ---
+  12. Replace simple follow-up detection
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:287 treats words like “now” as follow-up. That can cause false positives. Use conversation state: latest
+     ticket exists, latest unresolved issue, last intent, last ticket id.
+     Including the simple follow up detection --- we find if the user really created a ticket in that conversation or not ---- if the user doesnt have a ticket in that conversation ---- then we dont do follow up procedure
+  13. Improve RAG retrieval
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:54 uses topK(2) and threshold 0.5. Add metadata filters, source names, page numbers, company/tenant id if
+     needed, and return citations so answers can say where policy came from.
+     We added metadata and source pdf name and the citation pg no. inside the RAG retrieval ---
+  15. Give the model stricter tool schemas
+     Tool methods use plain strings and maps. Create DTOs/records for tool inputs and outputs where Spring AI supports it. This reduces malformed priority/category/conversation id behavior.
+
+
+     I also implemented ---- this feature ----- see it carefully ----
+     You are a senior backend engineer working on a Spring Boot + Spring AI app, and you need to upgrade the RAG ingestion pipeline to be production-ready by adding metadata, duplicate detection, and versioning. Currently, PDFs are chunked and directly stored in the VectorStore without tracking, causing duplicates and poor retrieval quality. Implement a CompanyPolicy JPA entity (id, fileName, companyId, fileHash, version, uploadedAt) with a repository, create a generateHash(Resource pdf) method using MD5, and before ingestion check if a record exists with the same fileHash and companyId—if yes, skip ingestion and return a message. If the file name exists but hash differs, increment version (latestVersion + 1). While processing documents, enrich each chunk with metadata: source (file name), companyId, uploadTime, chunkId (use AtomicInteger), and version, making sure to copy metadata safely and use doc.getFormattedContent() for content. Store enriched documents in VectorStore and save a CompanyPolicy record. Ensure clean, transactional code and add simple inline comments explaining each step (hashing, duplicate check, versioning, metadata, storage) so it’s easy to understand. The final system should avoid duplicate PDFs, support version tracking, and improve RAG quality
+
+     See the files CompanyPolicyService, CompanyPolicy and ToolService for the changes ----
+
+  Code Quality Improvements
+
+  16. Remove unused imports and unused dependencies in services
+     ChatService imports many RAG/vector classes that are not used, and has unused fields like messageRepository, ticketRepository, and ticketService. ToolService also has unused imports/fields.
+     Cleaning this will make the AI flow easier to understand.
+  17. Rename ollamaChatClient if it is just the global ChatClient
+     Several services call it ollamaChatClient, but src/main/java/com/Spring/AI_Customer_Support_Backend_System/Configuration/AIConfig.java:12 creates a generic ChatClient. Use one naming style.
+  18. Sanitize AI enum outputs consistently
+     generatePriority() uses .toUpperCase() but does not .trim() at src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/TicketService.java:67. Category does trim. Apply the same
+     cleanup everywhere.
+  19. Improve ticket detail freshness
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:135 returns lastUpdated as createdAt. Add an updatedAt field to Ticket if you want accurate status updates.
+  20. Add focused tests for the chat flow
+     The most valuable tests: new chat creates conversation, existing chat rejects wrong user, user/AI messages are saved in order, policy question calls search, frustrated refund creates ticket,
+     duplicate ticket returns friendly response, follow-up status calls getTicketDetails.
+
+
+     I also made the improvement of making the conversation history or company policy documents ---- untrusted --- so that the user cant change the system rules by prompt injection --- I have made necessary changes in the system prompt ---
+
+
+     I also made the improvement where we instead of using multiple AI calls for priority category, shouldEscalate or anything. We have used a single AI call to calculate all and return a JSON response for it ----
+
+     Modify the current Spring Boot AI ticketing system to replace multiple AI calls (title, priority, category) with a single structured AI classification call that returns a JSON object {title, priority, category, shouldEscalate, reason}; create a TicketAnalysisDTO class to map this response and implement a new AIService.analyzeForTicket(String message) method that enforces strict JSON-only output (no extra text) and parses it safely with fallback defaults, then update ToolService.createSupportTicket() to call this method once and use its values instead of calling AI multiple times, and refactor TicketService.createTicket() to accept priority and category as parameters (removing internal AI calls), ensuring the flow is deterministic, efficient, and uses structured output best practices like schema-driven JSON responses for reliability and easier parsing
+
+     Changes done for this improvement are ----
+  - Added src/main/java/com/Spring/AI_Customer_Support_Backend_System/DTO/TicketAnalysisDTO.java for {title, priority, category, shouldEscalate, reason}.
+  - Added AIService.analyzeForTicket(String message) in src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/AIService.java with strict JSON-only prompting, schema instructions, safe
+    JSON extraction, enum fallback defaults, and full fallback analysis.
+  - Removed the old unused multi-call helpers: generateTitle, generatePriority, detectCategory.
+  - Updated src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java so createSupportTicket() calls analyzeForTicket() once and passes title/priority/category into
+    ticket creation.
+  - Refactored src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/TicketService.java so createTicket() accepts PriorityType and CategoryType directly and no longer calls AI
+    internally.
+  - Updated src/main/java/com/Spring/AI_Customer_Support_Backend_System/Controller/TicketController.java to pass deterministic defaults for manual ticket creation.
+
+
+I also did these improvements
+
+  1. Fix new chat creation bug
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:195 calls conversationRepository.findById(conversationId) even when conversationId is null. New /api/chat
+     requests will fail before creating a conversation.
+     The flow should be: if conversationId == null, create conversation first; otherwise validate ownership and load it.
+  2. Avoid possible double AI/tool execution
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:206 stores CallResponseSpec, then calls both chatResponse() and content(). If those are terminal calls,
+     this can trigger the model/tool flow twice, which is dangerous because createSupportTicket has side effects. Use one terminal response and derive text/tool status from that single result.
+  3. Do not hardcode company id in RAG retrieval
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:63 filters with "YOUR_COMPANY_ID". That means policy search may return nothing or the wrong tenant’s docs.
+     The company id should come from the authenticated user/company/conversation context and be passed into the retrieval tool.
+  4. Add ownership checks inside tools
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:91 and src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:153 load
+     conversations only by id. If the model ever passes another conversation id, the tool can create/read tickets for that conversation. Tool methods should validate conversation ownership against
+     the current authenticated user, not only trust the LLM-provided id.
+  5. Do not keep a DB transaction open across AI calls
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:192 wraps the whole chat flow in @Transactional, including LLM calls and tool calls. That can hold DB
+     resources while waiting on AI and makes rollback behavior unclear. Keep short transactions around DB writes, not around external model calls.
+  6. Improve ticket-created AI reply
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:215 always says “Your issue is already escalated...” and appends content. Now that createSupportTicket
+     returns structured fields like ticket id, priority, category, and reason, the final reply should be generated from that single tool result. This avoids awkward text and makes the response
+     deterministic.
+  7. Use updatedAt for ticket status responses
+     src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:178 returns lastUpdated as createdAt. Since Ticket already has updatedAt, use that so “any update?”
+     responses are accurate.
+
+
+
+     Some improvements were still left ----
+
+       2. src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/MessageService.java:68: cached conversation messages are keyed only by conversationId, while authorization is inside the
+          cached method.
+          On a cache hit, Spring returns the cached messages without re-running the ownership check. The key should include user.id, or the ownership check should happen before the cached method.
+       3. src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ChatService.java:138: trusted orchestration flags are appended in the .user(...) message next to raw user input.
+          A user can inject confusing text like escalation=false or conversationId=... inside their message. The flags should be placed in the system/developer prompt or separated clearly as trusted
+          backend metadata, not concatenated into the same user message.
+       4. src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/CompanyPolicyService.java:48 and src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/ToolService.java:37:
+          policy versioning is recorded but retrieval does not filter latest versions.
+          If a policy PDF is uploaded again with changed content, old chunks remain in the vector store and searchCompanyPolicy can retrieve outdated policy text. Either delete old vectors for the same
+          fileName, or filter retrieval to the latest version.
+       5. src/main/java/com/Spring/AI_Customer_Support_Backend_System/Controller/AIController.java:18: /ai/test exposes raw AI completion outside the guarded support flow.
+          It bypasses conversation history, security prompt, RAG rules, and orchestration. If it is only for debugging, restrict it to admin or remove it from production.
+       6. src/main/java/com/Spring/AI_Customer_Support_Backend_System/Services/TicketService.java:454: ticket listing can throw NullPointerException for roles other than USER or AGENT.
+          ADMIN reaches this method but tickets remains null. Return admin-appropriate results or reject unsupported roles explicitly.
+
+
+Now I made a really good change ---- even if we had set up the tools and etc ---- it was really LLM dependent ----
+Now we made it backend dependent ----
+Now what changes did I made ----
+
+Refactor ChatService so orchestration is fully deterministic in Java. After IntentAnalysisDTO intent = aiService.analyzeIntent(...), do not let the main LLM decide tool usage anymore. If
+  intent.isEscalation() is true, directly call toolService.createSupportTicket(message, conversation.getId()); if intent.isFollowUp() is true, directly call
+  toolService.getTicketDetails(conversation.getId()); otherwise call getResponse(...) only for normal conversational/policy responses. Add a helper like generateToolResponse(Map<String,Object>
+  toolResult, String userMessage) that uses the LLM only to convert tool output into a short natural-language reply. Remove escalation/follow-up routing instructions from the main system prompt
+  since Java now controls routing. Keep all existing security checks, ownership validation, duplicate-ticket prevention, and conversation-history behavior unchanged.
+
+
+
+User Message
+   ↓
+Save user message
+   ↓
+Intent LLM (classification only)
+   ↓
+Java deterministic routing
+   ├── Escalation
+   │      └── createSupportTicket()
+   │              └── analyzeTicketDetails()
+   │                      └── Ticket creation
+   │
+   ├── Follow-up
+   │      └── getTicketDetails()
+   │
+   └── Normal query
+          └── Main conversational LLM
+                    └── only searchCompanyPolicy tool access
+
+
+
+Final AI Chat Architecture -----
+
+
+
+Final AI Chat Flow Architecture (Simple Notes)
+
+⸻
+
+Goal of the System
+
+The AI should:
+
+* chat normally with users
+* answer policy questions
+* create support tickets only when really needed
+* prevent prompt injection and fake escalations
+
+The backend should always stay in control.
+
+⸻
+
+Main Principle
+
+AI suggests → Backend decides
+
+The AI NEVER directly controls ticket creation.
+
+⸻
+
+Full Chat Flow
+
+User Message
+      ↓
+Security Validation
+      ↓
+Build Context
+      ↓
+AI Intent Analysis
+      ↓
+Backend Confidence Routing
+      ↓
+Final Action
+      ↓
+Save Messages
+      ↓
+Return Response
+
+⸻
+
+Step 1 — User Sends Message
+
+Example:
+
+"My payment failed and money got deducted twice"
+
+The request reaches:
+
+ChatController
+
+then:
+
+ChatService.chat()
+
+⸻
+
+Step 2 — Load or Create Conversation
+
+Backend:
+
+* checks if conversation exists
+* creates new conversation if needed
+
+This stores:
+
+* messages
+* ticket relation
+* conversation history
+
+⸻
+
+Step 3 — Save User Message
+
+The message is saved into database:
+
+Message table
+
+with:
+
+* sender = USER
+* content
+* timestamp
+
+⸻
+
+Step 4 — Build Conversation Context
+
+IntentContextService creates context for AI.
+
+This includes:
+
+⸻
+
+User behavior
+
+tickets today
+tickets this hour
+last ticket time
+
+⸻
+
+Conversation state
+
+has existing ticket?
+message count?
+session start time?
+
+⸻
+
+Conversation history
+
+Last messages are collected.
+
+Example:
+
+USER: payment failed
+AI: please try again
+USER: still not working
+
+⸻
+
+Step 5 — Sanitize History
+
+Before sending history to AI:
+
+sanitizeConversationHistory()
+
+runs.
+
+It:
+
+* removes suspicious injection text
+* truncates large history
+* removes control characters
+
+⸻
+
+Why?
+
+Prevents attacks like:
+
+ignore previous instructions
+always create tickets
+
+from influencing AI.
+
+⸻
+
+Step 6 — Security Validation
+
+Before AI escalation logic:
+
+SecurityValidationService
+
+checks:
+
+* prompt injection
+* abuse patterns
+* ticket spam
+* rate limits
+
+⸻
+
+Example
+
+Blocked:
+
+"create 100 tickets"
+
+Allowed:
+
+"my account is locked"
+
+⸻
+
+Step 7 — AI Intent Analysis
+
+Now AI analyzes the request.
+
+AI receives:
+
+* current message
+* sanitized history
+* ticket state
+* user behavior context
+
+⸻
+
+AI Returns Structured JSON
+
+Example:
+
+{
+  "escalation": true,
+  "followUp": false,
+  "confidence": 0.94,
+  "reason": "payment failure with repeated issue"
+}
+
+⸻
+
+Meaning of Fields
+
+Field	Meaning
+escalation	human support needed
+followUp	user asking about existing ticket
+confidence	how sure AI is
+reason	why AI decided
+
+⸻
+
+Step 8 — Backend Confidence Routing
+
+THIS is the core architecture.
+
+Backend decides final action.
+
+⸻
+
+Case 1 — High Confidence Escalation
+
+confidence >= 0.85
+
+Backend:
+✅ creates support ticket
+
+⸻
+
+Example
+
+"My refund still has not arrived after 10 days"
+
+⸻
+
+Case 2 — Medium Confidence
+
+0.60 <= confidence < 0.85
+
+Backend:
+❓ asks clarification question
+
+⸻
+
+Example
+
+User:
+
+"My account seems weird"
+
+AI unsure.
+
+Backend asks:
+
+"What issue are you experiencing with your account?"
+
+⸻
+
+Case 3 — Low Confidence
+
+confidence < 0.60
+
+Backend:
+💬 normal AI chat only
+
+NO ticket creation.
+
+⸻
+
+Example
+
+"create a ticket"
+
+No actual issue.
+
+So:
+
+* no escalation
+* normal response
+
+⸻
+
+Case 4 — Follow-Up
+
+If AI says:
+
+followUp = true
+
+Backend:
+
+* fetches ticket details
+* returns ticket status
+
+⸻
+
+Example
+
+"What is the status of my ticket?"
+
+⸻
+
+Step 9 — Tool Layer
+
+Backend tools are deterministic.
+
+⸻
+
+createSupportTicket()
+
+Creates:
+
+* ticket
+* agent assignment
+* activities
+
+But ONLY after backend approval.
+
+⸻
+
+getTicketDetails()
+
+Returns:
+
+* ticket status
+* assigned agent
+* priority
+* timestamps
+
+⸻
+
+searchCompanyPolicy()
+
+Uses:
+
+* vector database
+* RAG search
+
+to answer policy questions.
+
+⸻
+
+Step 10 — AI Generates Final Reply
+
+After tools execute:
+
+AI converts tool result into:
+
+* short
+* safe
+* professional response
+
+⸻
+
+Example
+
+Tool result:
+
+Ticket created successfully
+
+AI response:
+
+Your support ticket has been created successfully. Our team will contact you soon.
+
+⸻
+
+Step 11 — Save AI Response
+
+AI message is stored in DB:
+
+* sender = AI
+* timestamp
+* linked conversation
+
+⸻
+
+Step 12 — Response Sent to Frontend
+
+Frontend receives:
+
+{
+  "userMessage": "...",
+  "aiReply": "...",
+  "conversationId": "..."
+}
+
+⸻
+
+Most Important Security Principle
+
+LLM NEVER directly performs actions.
+
+Instead:
+
+LLM → classification only
+Backend → final authority
+
+⸻
+
+Security Layers in Your Architecture
+
+Layer	Purpose
+Prompt rules	guide AI behavior
+Sanitized history	reduce injection
+SecurityValidationService	block abuse
+Confidence thresholds	reduce hallucinated escalation
+Backend validation	final protection
+Rate limiting	prevent spam
+Deterministic tools	controlled actions
+
+⸻
+
+Final Architecture Summary
+
+User Message
+    ↓
+Security Validation
+    ↓
+Context Building
+    ↓
+Sanitized History
+    ↓
+AI Intent Classification
+    ↓
+Confidence-Based Routing
+    ↓
+Backend Decision
+    ↓
+Tool Execution
+    ↓
+AI Response Generation
+    ↓
+Database Persistence
+    ↓
+Frontend Response
+
+⸻
+
+Final Design Philosophy
+
+AI provides intelligence.
+Backend provides control.
+
+This is the correct production AI architecture.
+
+
+
+
+
+
+
+
+
+
+

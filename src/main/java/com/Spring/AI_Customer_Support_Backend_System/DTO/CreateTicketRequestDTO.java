@@ -1,6 +1,6 @@
 package com.Spring.AI_Customer_Support_Backend_System.DTO;
 
-import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.CategoryType;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,7 +14,11 @@ public class CreateTicketRequestDTO {
     private String title;
     @NotBlank(message = "description is required")
     private String description;
+    private CategoryType category;
 
-    private PriorityType priority;
+    public CreateTicketRequestDTO(String title, String description) {
+        this.title = title;
+        this.description = description;
+    }
 
 }

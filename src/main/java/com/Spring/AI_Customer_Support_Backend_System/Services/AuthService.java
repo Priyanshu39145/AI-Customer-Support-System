@@ -38,6 +38,7 @@ public class AuthService {
     private final AuthUtil authUtil;
 
     public RegisterResponseDTO register(RegisterRequestDTO registerRequestDTO) {
+        //We first check for the existence of the user in the database --- if it is present then we give an exception ---
         log.info("Register attempt for email: {}", registerRequestDTO.getEmail());
         User user = userRepository.findByEmail(registerRequestDTO.getEmail()).orElse(null);
 
@@ -47,6 +48,7 @@ public class AuthService {
         }
 
 
+        //Then we create a new user ---- inside the DB --- and then return the response ----
         User newuser = User.builder()
                 .email(registerRequestDTO.getEmail())
                 .name(registerRequestDTO.getName())
@@ -64,14 +66,22 @@ public class AuthService {
 
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
         log.info("Login attempt for email: {}", loginRequestDTO.getEmail());
+        //We first authenticate using the authentication manager which internally uses the UsernamePasswordAuthenticationToken containing the username and password for the user ----
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequestDTO.getEmail() , loginRequestDTO.getPassword())
         );
 
+        //We get the user object from the authentication object once its authenticated from the database ---
+        //How it authenticates --- see the CustomUserDetailsService ---- it has the method loadUser --- which checks the incoming user by the email --- and thus it finds the user is present in the DB or not ---
+        //That method returns the user inside the authentication object ------
+        //See the User entity --- it implements the UserDetails interface --- it helps us to link the User entity to the Spring Security such that the authenticationManager always checks the userRepository for the user ---
         User user = (User) authentication.getPrincipal();
 
+
+        //We create the JWT token using the user object here ----
         String token = authUtil.generateAccessToken(user);
         log.info("Login successful for user: {}", user.getEmail());
+        //We return the response including the JWT token ---
         return new LoginResponseDTO(user.getEmail() , user.getRole() , token);
     }
 

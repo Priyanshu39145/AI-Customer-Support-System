@@ -18,18 +18,18 @@ public class Conversation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(length = 50)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String title;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
-    private String chatId;
-
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
     private List<Message> messages;
+
+    @OneToOne(mappedBy = "conversation")
+    private Ticket ticket;
 
     @CreationTimestamp
     private LocalDateTime timestamp;

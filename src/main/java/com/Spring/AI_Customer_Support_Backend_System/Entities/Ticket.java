@@ -1,15 +1,14 @@
 package com.Spring.AI_Customer_Support_Backend_System.Entities;
 
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.CategoryType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Getter
@@ -17,7 +16,13 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "tickets")
+@Table(
+        name = "tickets",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_conversation_ticket",
+                columnNames = "conversation_id"
+        )
+)
 public class Ticket {
 
     @Id
@@ -37,6 +42,14 @@ public class Ticket {
     @Column(nullable = false)
     private PriorityType priority;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CategoryType category;
+
+    @OneToOne
+    @JoinColumn(name = "conversation_id", unique = true)
+    private Conversation conversation;
+
     @ManyToOne
     @JoinColumn(name="created_by", nullable = false)
     private User createdBy;
@@ -44,10 +57,6 @@ public class Ticket {
     @JoinColumn(name = "assigned_to") //Tickets can exists without any Agent
     private User assignedTo;
 
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "ticket" , fetch = FetchType.LAZY)
-    private List<Message> messages;
 
 
     @CreationTimestamp

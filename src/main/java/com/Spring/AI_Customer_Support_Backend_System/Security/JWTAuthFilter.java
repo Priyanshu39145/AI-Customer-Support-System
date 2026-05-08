@@ -37,10 +37,12 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             //We display a custom log message where we display the request URL ---
             log.info("incoming request: {}" , request.getRequestURI());
 
+
             //We first get the Request header where the JWT Token will be stored ---
             //We are getting the String under the header Authorization ---
             //In normal header JWT is stored as "Bearer ygruygrhjlqdio2rjkl.qVRUQVUOUQKEFBUWF.qkhgefvyvfutyvuovjqf" ---- Bearer space then the token
             final String header = request.getHeader("Authorization");
+            log.info("Authorization header: {}", header);
 
             //We check if the header is not null or valid
             if(header== null || !header.startsWith("Bearer "))   {
@@ -66,6 +68,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
 
                 //For the authorities we set the user.getAuthorities with the authority --- the user has  ---
                 //So that we can know about the user roles from the JWT and allow role based access --
+                System.out.println(user.getAuthorities());
                 UsernamePasswordAuthenticationToken userToken = new UsernamePasswordAuthenticationToken(user,null,user.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(userToken);
 

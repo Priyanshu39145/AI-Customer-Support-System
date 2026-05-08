@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket Resolved</title>
+</head>
+<body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f4f4f4;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4; padding:20px;">
+    <tr>
+        <td align="center">
+
+            <!-- Main Container -->
+            <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+
+                <!-- Header -->
+                <tr>
+                    <td style="background:#28a745; color:#ffffff; padding:20px; text-align:center; font-size:22px; font-weight:bold;">
+                        ✅ Ticket Resolved
+                    </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                    <td style="padding:30px; color:#333333; font-size:15px; line-height:1.6;">
+
+                        <p>Hi {{userName}},</p>
+
+                        <p>
+                            Good news! 🎉 Your support ticket has been successfully resolved by our team.
+                        </p>
+
+                        <!-- Ticket Details -->
+                        <table width="100%" cellpadding="10" cellspacing="0" style="margin:20px 0; border:1px solid #ddd; border-radius:5px;">
+                            <tr style="background:#f9f9f9;">
+                                <td><strong>Ticket ID</strong></td>
+                                <td>{{ticketId}}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Issue</strong></td>
+                                <td>{{description}}</td>
+                            </tr>
+                            <tr style="background:#f9f9f9;">
+                                <td><strong>Status</strong></td>
+                                <td style="color:#28a745; font-weight:bold;">CLOSED</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Priority</strong></td>
+                                <td>{{priority}}</td>
+                            </tr>
+                            <tr style="background:#f9f9f9;">
+                                <td><strong>Handled By</strong></td>
+                                <td>{{agentName}}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Resolved At</strong></td>
+                                <td>{{resolvedAt}}</td>
+                            </tr>
+                        </table>
+
+                        <p>
+                            If your issue is not fully resolved or you need further assistance, feel free to reply to this email or create a new support request.
+                        </p>
+
+                        <!-- CTA Button -->
+                        <p style="text-align:center; margin:30px 0;">
+                            <a href="{{supportLink}}"
+                               style="background:#28a745; color:#ffffff; padding:12px 20px; text-decoration:none; border-radius:5px; display:inline-block;">
+                                Contact Support
+                            </a>
+                        </p>
+
+                        <p>Thanks for your patience and for choosing us.</p>
+
+                        <p>Best regards,<br><strong>Your Support Team</strong></p>
+
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="background:#eeeeee; padding:20px; text-align:center; font-size:12px; color:#777777;">
+                        © 2026 Your Company. All rights reserved.<br>
+                        <a href="{{unsubscribeLink}}" style="color:#28a745; text-decoration:none;">Unsubscribe</a>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

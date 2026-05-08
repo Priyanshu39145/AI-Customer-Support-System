@@ -19,19 +19,12 @@ public class MessageController {
 
     private final MessageService messageService;
 
-    @PostMapping("/tickets/{ticketId}/messages")
-    public ResponseEntity<MessageResponseDTO> sendMessage(@PathVariable String ticketId, @Valid @RequestBody MessageRequestDTO messageRequestDTO)  {
-        //This statement gives us all the details of the current user including the role ---
-        //We have to set /doctors as request matchers to only roles containing doctor ---
-        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return ResponseEntity.status(HttpStatus.CREATED).body(messageService.sendMessage(user,ticketId,messageRequestDTO));
-    }
 
-    @GetMapping("/tickets/{ticketId}/messages")
-    public ResponseEntity<List<MessageResponseDTO>> getMessages(@PathVariable String ticketId)  {
+    @GetMapping("/messages/{conversationId}")
+    public ResponseEntity<List<MessageResponseDTO>> getMessages(@PathVariable String conversationId)  {
         //This statement gives us all the details of the current user including the role ---
         //We have to set /doctors as request matchers to only roles containing doctor ---
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return ResponseEntity.status(HttpStatus.OK).body(messageService.getMessages(ticketId,user));
+        return ResponseEntity.status(HttpStatus.OK).body(messageService.getMessages(conversationId,user));
     }
 }

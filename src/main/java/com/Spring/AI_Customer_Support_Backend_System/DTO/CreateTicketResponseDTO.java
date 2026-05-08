@@ -1,5 +1,6 @@
 package com.Spring.AI_Customer_Support_Backend_System.DTO;
 
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.CategoryType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
 import lombok.AllArgsConstructor;
@@ -14,4 +15,5 @@ public class CreateTicketResponseDTO {
     private String title;
     private StatusType status;
     private PriorityType priority;
+    private CategoryType category;
 }
