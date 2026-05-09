@@ -47,7 +47,7 @@ public class ToolService {
                 SearchRequest.builder()
                         .query(query)
                         .topK(5)
-                        .similarityThreshold(0.7)
+                        .similarityThreshold(0.5)
                         .build()
         );
 
