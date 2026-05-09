@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.annotation.Tool;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -66,6 +67,7 @@ Your sole purpose: answer customer questions professionally using policy referen
 
 	private final MessageService messageService;
 
+	@Qualifier("conversationalChatClient")
 	private final ChatClient ollamaChatClient;
 
 //	private final VectorStore vectorStore;

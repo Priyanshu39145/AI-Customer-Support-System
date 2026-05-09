@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,7 @@ public class AIService {
     private static final double MIN_CONFIDENCE = 0.0;
     private static final double MAX_CONFIDENCE = 1.0;
 
+    @Qualifier("fastChatClient")
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
 
@@ -39,6 +42,11 @@ public class AIService {
         return new AIResponse(message, content, null, LocalDateTime.now());
     }
 
+    @Cacheable(
+            value = "intentAnalysis",
+            key = "#context.currentMessage + '_' + #context.hasExistingTicket + '_' + #context.messageHistory.hashCode()",
+            unless = "#result == null || #result.reason.contains('failed')"
+    )
     public IntentAnalysisDTO analyzeIntent(IntentContextDTO context) {
         log.info("Analyzing chat intent | userId: {}, hasExistingTicket: {}, ticketsToday: {}, messageLength: {}",
                 context.getUserId(),
@@ -151,6 +159,11 @@ public class AIService {
         }
     }
 
+    @Cacheable(
+            value = "ticketAnalysis",
+            key = "#message.hashCode()",
+            unless = "#result == null || #result.reason.contains('failed')"
+    )
     public TicketAnalysisDTO analyzeTicketDetails(String message) {
         log.info("Analyzing ticket details | messageLength: {}",
                 message != null ? message.length() : 0);

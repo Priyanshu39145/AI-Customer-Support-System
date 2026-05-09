@@ -5,11 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class IntentAnalysisDTO {
+public class IntentAnalysisDTO implements Serializable {
 
     private boolean escalation;
     private boolean followUp;

@@ -690,6 +690,12 @@ Backend provides control.
 This is the correct production AI architecture.
 
 
+Now my LLM calls were 3 mins long ---
+I optimized them --- first by using a different model llama3.2:3b for the intent and ticketanalysis ---- and the old model for the response generation ----
+I also added Redis caching to the responses ----
+I also improved Ollama properties ----
+
+
 
 
 

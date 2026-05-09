@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,7 @@ public class CompanyPolicyService {
     private final CompanyPolicyRepository companyPolicyRepository;
 
     @Transactional
+    @CacheEvict(value = "policySearch", allEntries = true)  // ADD THIS
     public String addCompanyPolicy(Resource pdf) {
 
         if (pdf == null) {

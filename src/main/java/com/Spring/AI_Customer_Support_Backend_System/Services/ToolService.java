@@ -13,6 +13,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +33,11 @@ public class ToolService {
 
     private final AIService aiService;
 
+    @Cacheable(
+            value = "policySearch",
+            key = "#query",
+            unless = "#result == null || #result.contains('No relevant')"
+    )
     @Tool(name = "searchCompanyPolicy", description = "Retrieve official company policies with citations")
     public String searchCompanyPolicy(String query) {
         log.info("Searching company policy | queryLength: {}",
