@@ -1,18 +1,18 @@
 package com.Spring.AI_Customer_Support_Backend_System.Services;
 
-import com.Spring.AI_Customer_Support_Backend_System.DTO.LoginRequestDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.LoginResponseDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterRequestDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterResponseDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.*;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.RefreshToken;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.ProviderType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
+import com.Spring.AI_Customer_Support_Backend_System.Repositories.RefreshTokenRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Security.AuthUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,6 +23,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,6 +42,12 @@ public class AuthService {
     private final ModelMapper modelMapper;
     private final AuthenticationManager authenticationManager;
     private final AuthUtil authUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    @Value("${jwt.refreshTokenExpirationDays:7}")
+    private long refreshTokenExpirationDays;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public RegisterResponseDTO register(RegisterRequestDTO registerRequestDTO) {
         //We first check for the existence of the user in the database --- if it is present then we give an exception ---
@@ -80,9 +92,62 @@ public class AuthService {
 
         //We create the JWT token using the user object here ----
         String token = authUtil.generateAccessToken(user);
+        String refreshToken = createRefreshToken(user);
         log.info("Login successful for user: {}", user.getEmail());
         //We return the response including the JWT token ---
-        return new LoginResponseDTO(user.getEmail() , user.getRole() , token);
+        LoginResponseDTO responseDTO = new LoginResponseDTO(user.getEmail() , user.getRole() , token);
+        responseDTO.setRefreshToken(refreshToken);
+        return responseDTO;
+    }
+
+    @Transactional
+    public LoginResponseDTO refresh(RefreshTokenRequestDTO requestDTO) {
+        RefreshToken existingToken = refreshTokenRepository.findByToken(hashToken(requestDTO.getRefreshToken()))
+                .orElseThrow(() -> {
+                    log.warn("Refresh failed - token not found");
+                    return new BadCredentialsException("Invalid refresh token");
+                });
+
+        if(existingToken.isRevoked()) {
+            log.warn("Refresh failed - token revoked | tokenId: {}", existingToken.getId());
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+
+        if(existingToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            existingToken.setRevoked(true);
+            existingToken.setRevokedAt(LocalDateTime.now());
+            refreshTokenRepository.save(existingToken);
+            log.warn("Refresh failed - token expired | tokenId: {}", existingToken.getId());
+            throw new BadCredentialsException("Refresh token expired");
+        }
+
+        User user = existingToken.getUser();
+        if(user == null || !user.isEnabled()) {
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+
+        existingToken.setRevoked(true);
+        existingToken.setRevokedAt(LocalDateTime.now());
+        refreshTokenRepository.save(existingToken);
+
+        String accessToken = authUtil.generateAccessToken(user);
+        String refreshToken = createRefreshToken(user);
+        LoginResponseDTO responseDTO = new LoginResponseDTO(user.getEmail(), user.getRole(), accessToken);
+        responseDTO.setRefreshToken(refreshToken);
+
+        log.info("Refresh successful for user: {}", user.getEmail());
+        return responseDTO;
+    }
+
+    @Transactional
+    public void logout(LogoutRequestDTO requestDTO) {
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(hashToken(requestDTO.getRefreshToken()))
+                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+
+        refreshToken.setRevoked(true);
+        refreshToken.setRevokedAt(LocalDateTime.now());
+        refreshTokenRepository.save(refreshToken);
+        log.info("Refresh token revoked | tokenId: {}", refreshToken.getId());
     }
 
     @Transactional
@@ -136,7 +201,9 @@ public class AuthService {
 //        }
         log.info("OAuth2 login successful for user: {}", email);
         //Now we have to log in the user by sending a LoginResponseDTO ---- It requires the JWT and the userId
-        LoginResponseDTO loginResponseDTO = new LoginResponseDTO(user1.getEmail(), user1.getRole(), authUtil.generateAccessToken(user1));
+        String accessToken = authUtil.generateAccessToken(user1);
+        LoginResponseDTO loginResponseDTO = new LoginResponseDTO(user1.getEmail(), user1.getRole(), accessToken);
+        loginResponseDTO.setRefreshToken(createRefreshToken(user1));
 
         return ResponseEntity.status(HttpStatus.OK).body(loginResponseDTO);
 
@@ -176,5 +243,30 @@ public class AuthService {
         log.info("OAuth2 user registered successfully: {}", email);
         return newUser;
 
+    }
+
+    private String createRefreshToken(User user) {
+        byte[] randomBytes = new byte[64];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+
+        RefreshToken refreshToken = RefreshToken.builder()
+                .token(hashToken(token))
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusDays(refreshTokenExpirationDays))
+                .revoked(false)
+                .build();
+        refreshTokenRepository.save(refreshToken);
+        return token;
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Unable to hash refresh token", e);
+        }
     }
 }

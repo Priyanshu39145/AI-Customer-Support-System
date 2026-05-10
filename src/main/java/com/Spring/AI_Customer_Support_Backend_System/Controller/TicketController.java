@@ -98,5 +98,20 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getTicketsOfUser(user,keyword,status,priority,category,assignedToId,createdFrom,createdTo,page,size));
     }
 
+    @GetMapping("/agents/me/tickets")
+    @PreAuthorize("hasRole('AGENT')")
+    public ResponseEntity<Page<TicketResponseDTO>> getTicketsAssignedToCurrentAgent(@RequestParam(defaultValue = "0") int page,
+                                                                                   @RequestParam(defaultValue = "10") int size,
+                                                                                   @RequestParam(required = false) String keyword,
+                                                                                   @RequestParam(required = false) StatusType status,
+                                                                                   @RequestParam(required = false) PriorityType priority,
+                                                                                   @RequestParam(required = false) CategoryType category,
+                                                                                   @RequestParam(required = false) String assignedToId,
+                                                                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
+                                                                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(ticketService.getTicketsOfUser(user, keyword, status, priority, category, assignedToId, createdFrom, createdTo, page, size));
+    }
+
 
 }

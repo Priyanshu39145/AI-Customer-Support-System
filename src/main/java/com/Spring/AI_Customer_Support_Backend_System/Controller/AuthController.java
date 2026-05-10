@@ -1,9 +1,6 @@
 package com.Spring.AI_Customer_Support_Backend_System.Controller;
 
-import com.Spring.AI_Customer_Support_Backend_System.DTO.LoginRequestDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.LoginResponseDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterRequestDTO;
-import com.Spring.AI_Customer_Support_Backend_System.DTO.RegisterResponseDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.*;
 import com.Spring.AI_Customer_Support_Backend_System.Services.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +24,17 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO)    {
         return ResponseEntity.ok(authService.login(loginRequestDTO));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponseDTO> refresh(@Valid @RequestBody RefreshTokenRequestDTO requestDTO) {
+        return ResponseEntity.ok(authService.refresh(requestDTO));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequestDTO requestDTO) {
+        authService.logout(requestDTO);
+        return ResponseEntity.noContent().build();
     }
 
 }

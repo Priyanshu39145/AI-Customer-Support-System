@@ -123,4 +123,22 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     int countByCreatedByAndCreatedAtAfter(User user, LocalDateTime todayStart);
 
     Optional<Ticket> findTopByCreatedByOrderByCreatedAtDesc(User user);
+
+    long countByStatus(StatusType status);
+
+    long countByPriority(PriorityType priority);
+
+    long countByAssignedToAndStatusIn(User assignedTo, List<StatusType> statuses);
+
+    long countByAssignedTo(User assignedTo);
+
+    long countByCreatedBy(User createdBy);
+
+    long countByCreatedByAndStatus(User createdBy, StatusType status);
+
+    long countByCreatedByAndPriority(User createdBy, PriorityType priority);
+
+    long countByAssignedToAndStatus(User assignedTo, StatusType status);
+
+    long countByAssignedToAndPriority(User assignedTo, PriorityType priority);
 }

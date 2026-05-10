@@ -12,9 +12,26 @@ public interface ConversationRepository extends JpaRepository<Conversation, Stri
 
 //    Conversation findByUserAndChatIdOrderByTimestampAsc(String userId, String chatId);
 
-    List<Conversation> findByUserOrderByTimestampDesc(User user);
+    List<Conversation> findByUserAndDeletedFalseOrderByTimestampDesc(User user);
 
     boolean existsByIdAndUserId(String conversationId, String id);
+
+    boolean existsByIdAndUserIdAndDeletedFalse(String conversationId, String id);
+
+    @Query("""
+            SELECT DISTINCT c
+            FROM Conversation c
+            LEFT JOIN c.messages m
+            WHERE c.user = :user
+              AND c.deleted = false
+              AND (
+                  LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(m.content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              )
+            ORDER BY c.timestamp DESC
+            """)
+    List<Conversation> searchUserConversations(@Param("user") User user,
+                                               @Param("keyword") String keyword);
 
     @Query("SELECT COUNT(m) FROM Message m WHERE m.conversation.id = :conversationId")
     int countMessagesInConversation(@Param("conversationId") String conversationId);

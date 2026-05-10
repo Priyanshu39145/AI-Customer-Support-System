@@ -1,10 +1,13 @@
 package com.Spring.AI_Customer_Support_Backend_System.Services;
 
 import com.Spring.AI_Customer_Support_Backend_System.DTO.AgentCategoriesResponseDTO;
+import com.Spring.AI_Customer_Support_Backend_System.DTO.AgentResponseDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.AssignAgentCategoriesRequestDTO;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.CategoryType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
+import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +16,10 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +27,7 @@ import java.util.Set;
 public class AgentService {
 
     private final UserRepository userRepository;
+    private final TicketRepository ticketRepository;
 
     @Transactional
     @Caching(evict = {
@@ -61,5 +67,21 @@ public class AgentService {
                 agent.getEmail(),
                 agent.getExpertise()
         );
+    }
+
+    public List<AgentResponseDTO> getAgents() {
+        List<StatusType> activeStatuses = List.of(StatusType.OPEN, StatusType.IN_PROGRESS);
+        log.info("Fetching agents for admin assignment UI");
+
+        return userRepository.findByRole(RoleType.AGENT)
+                .stream()
+                .map(agent -> new AgentResponseDTO(
+                        agent.getId(),
+                        agent.getName(),
+                        agent.getEmail(),
+                        agent.getExpertise(),
+                        ticketRepository.countByAssignedToAndStatusIn(agent, activeStatuses)
+                ))
+                .collect(Collectors.toList());
     }
 }

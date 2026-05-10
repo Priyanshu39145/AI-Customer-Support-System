@@ -5,6 +5,7 @@ import com.Spring.AI_Customer_Support_Backend_System.DTO.IntentAnalysisDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.IntentContextDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.MessageResponseDTO;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Conversation;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.ConversationStatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.SenderType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.ConversationRepository;
@@ -92,14 +93,16 @@ Your sole purpose: answer customer questions professionally using policy referen
 
 		Conversation conversation = null;
 		if(conversationId!=null)
-			conversation = conversationRepository.findById(conversationId).orElse(null);
+			conversation = conversationService.getConversationById(conversationId);
 		if(conversation==null)	{
 			log.info("No existing conversation found, creating a new one | userId: {}",
 					user != null ? user.getId() : null);
 			conversation = conversationService.createConversation(user,message);
 		}
-		else if(!conversationRepository.existsByIdAndUserId(conversationId,user.getId()))
+		else if(!conversationRepository.existsByIdAndUserIdAndDeletedFalse(conversationId,user.getId()))
 			throw new IllegalArgumentException("Invalid Conversation");
+		else if(conversation.getStatus() == ConversationStatusType.CLOSED)
+			throw new IllegalStateException("Conversation is closed");
 		else {
 			log.info("Using existing conversation | conversationId: {}, userId: {}",
 					conversation.getId(),

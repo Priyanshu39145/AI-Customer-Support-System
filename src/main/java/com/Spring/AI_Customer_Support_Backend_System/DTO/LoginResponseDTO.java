@@ -13,4 +13,13 @@ public class LoginResponseDTO {
     private String email;
     private RoleType role;
     private String jwtToken;
+    private String accessToken;
+    private String refreshToken;
+
+    public LoginResponseDTO(String email, RoleType role, String jwtToken) {
+        this.email = email;
+        this.role = role;
+        this.jwtToken = jwtToken;
+        this.accessToken = jwtToken;
+    }
 }
