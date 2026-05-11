@@ -35,7 +35,7 @@ public class SecurityValidationService {
             "bombard support"
     );
 
-    private static final int MAX_TICKETS_PER_HOUR = 1;
+    private static final int MAX_TICKETS_PER_HOUR = 5;
     private static final int MAX_TICKETS_PER_DAY = 10;
     private static final long MIN_SECONDS_BETWEEN_TICKETS = 30;
 

@@ -73,6 +73,31 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
                                               @Param("createdTo") LocalDateTime createdTo,
                                               Pageable pageable);
 
+    @Query("""
+    SELECT t FROM Ticket t
+    WHERE
+        (
+            :keyword IS NULL
+            OR :keyword = ''
+            OR LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        )
+        AND (:status IS NULL OR t.status = :status)
+        AND (:priority IS NULL OR t.priority = :priority)
+        AND (:category IS NULL OR t.category = :category)
+        AND (:assignedToId IS NULL OR t.assignedTo.id = :assignedToId)
+        AND (:createdFrom IS NULL OR t.createdAt >= :createdFrom)
+        AND (:createdTo IS NULL OR t.createdAt <= :createdTo)
+    """)
+    Page<Ticket> searchAllTickets(@Param("keyword") String keyword,
+                                  @Param("status") StatusType status,
+                                  @Param("priority") PriorityType priority,
+                                  @Param("category") CategoryType category,
+                                  @Param("assignedToId") String assignedToId,
+                                  @Param("createdFrom") LocalDateTime createdFrom,
+                                  @Param("createdTo") LocalDateTime createdTo,
+                                  Pageable pageable);
+
     //Searching by keyword only --- we use Query method for it ---
     @Query("""
     SELECT t FROM Ticket t

@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -20,5 +21,11 @@ public class TicketResponseDTO implements Serializable {
     private PriorityType priority;
     private CategoryType category;
     private String createdById;
+    private String createdByName;
+    private String createdByEmail;
     private String assignedToId;
+    private String assignedToName;
+    private String assignedToEmail;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

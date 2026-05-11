@@ -35,8 +35,14 @@ build/
 # Logs
 *.log
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
 # Application secrets
 application.properties
 
 # OS
 .DS_Store
+

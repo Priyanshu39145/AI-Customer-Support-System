@@ -21,6 +21,13 @@ import java.io.IOException;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitingService rateLimitingService;
+
+    // Skip CORS preflight OPTIONS requests to allow them through without rate limiting
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "OPTIONS".equalsIgnoreCase(request.getMethod());
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         //We have to extract the client's IP so that we can pass it as key ---

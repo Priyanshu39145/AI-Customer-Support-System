@@ -68,6 +68,21 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.assignTicket(user, ticketId, agentId));
     }
 
+    @GetMapping("/tickets")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<TicketResponseDTO>> getAllTickets(@RequestParam(defaultValue = "0") int page,
+                                                                 @RequestParam(defaultValue = "10") int size,
+                                                                 @RequestParam(required = false) String keyword,
+                                                                 @RequestParam(required = false) StatusType status,
+                                                                 @RequestParam(required = false) PriorityType priority,
+                                                                 @RequestParam(required = false) CategoryType category,
+                                                                 @RequestParam(required = false) String assignedToId,
+                                                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
+                                                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(ticketService.getAllTicketsForAdmin(user, keyword, status, priority, category, assignedToId, createdFrom, createdTo, page, size));
+    }
+
     @GetMapping("/tickets/{ticketId}")
     public ResponseEntity<TicketDetailedResponseDTO> getTicketById(@PathVariable String ticketId)   {
         //This statement gives us all the details of the current user including the role ---
@@ -77,7 +92,7 @@ public class TicketController {
     }
 
     @GetMapping("/tickets/{ticketId}/history")
-    @PreAuthorize("hasAnyRole('USER', 'AGENT')")
+    @PreAuthorize("hasAnyRole('USER', 'AGENT', 'ADMIN')")
     public ResponseEntity<List<TicketActivityResponseDTO>> getTicketHistory(@PathVariable String ticketId) {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ticketService.getTicketHistory(ticketId, user));

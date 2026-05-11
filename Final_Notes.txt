@@ -695,6 +695,19 @@ I optimized them --- first by using a different model llama3.2:3b for the intent
 I also added Redis caching to the responses ----
 I also improved Ollama properties ----
 
+I added these endpoints
+Implement the remaining production-grade frontend support endpoints for the AI Customer Support Backend System using the existing Spring Boot architecture, DTO patterns, service layer, repositories, and security style already present in the project.
+ Add GET /users/me that returns the currently authenticated user details (id, name, email, role) using a new lightweight DTO and SecurityContextHolder.
+ Add DELETE /conversations/{conversationId} allowing only the owner to soft-delete or permanently delete a conversation and its messages safely with validation.
+ Add PUT /conversations/{conversationId}/title accepting a DTO with title field to rename conversations after ownership validation.
+ Add GET /agents restricted to ADMIN role returning all AGENT users with their expertise categories and optionally current active-ticket counts for admin assignment UI.
+ Add GET /agents/me/tickets restricted to AGENT role returning tickets assigned to the currently authenticated agent with the same filtering/pagination style as /users/me/tickets.
+ Add GET /dashboard/stats returning counts like openTickets, resolvedTickets, highPriorityTickets, totalTickets, and ticketsAssignedToMe depending on user role (USER/AGENT/ADMIN).
+ Add GET /conversations/search?keyword= allowing authenticated users to search only their own conversations by title or message content.
+ Add PUT /conversations/{conversationId}/close to archive/close conversations without deleting them by introducing a conversation status field if needed.
+ Implement POST /auth/refresh using JWT refresh-token flow with secure refresh-token validation and new access-token issuance, including DTOs and expiry handling. Optionally add POST /auth/logout to invalidate refresh tokens for future Redis/token-blacklist support.
+ Follow existing logging style, ResponseEntity usage, DTO mapping, validation, ownership checks, role-based authorization, and exception handling conventions already used throughout the project. Ensure all endpoints are frontend-friendly, RESTful, secure, production-oriented, and fully integrated into the current layered architecture.
+
 
 
 

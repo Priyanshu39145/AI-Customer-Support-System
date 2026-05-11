@@ -95,8 +95,17 @@ public class AuthService {
         String refreshToken = createRefreshToken(user);
         log.info("Login successful for user: {}", user.getEmail());
         //We return the response including the JWT token ---
-        LoginResponseDTO responseDTO = new LoginResponseDTO(user.getEmail() , user.getRole() , token);
-        responseDTO.setRefreshToken(refreshToken);
+        LoginResponseDTO.UserDTO userDTO = LoginResponseDTO.UserDTO.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .role(user.getRole())
+                .build();
+        LoginResponseDTO responseDTO = LoginResponseDTO.builder()
+                .accessToken(token)
+                .refreshToken(refreshToken)
+                .user(userDTO)
+                .build();
         return responseDTO;
     }
 
@@ -131,9 +140,18 @@ public class AuthService {
         refreshTokenRepository.save(existingToken);
 
         String accessToken = authUtil.generateAccessToken(user);
-        String refreshToken = createRefreshToken(user);
-        LoginResponseDTO responseDTO = new LoginResponseDTO(user.getEmail(), user.getRole(), accessToken);
-        responseDTO.setRefreshToken(refreshToken);
+        String refreshTokenVal = createRefreshToken(user);
+        LoginResponseDTO.UserDTO userDTO = LoginResponseDTO.UserDTO.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .role(user.getRole())
+                .build();
+        LoginResponseDTO responseDTO = LoginResponseDTO.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshTokenVal)
+                .user(userDTO)
+                .build();
 
         log.info("Refresh successful for user: {}", user.getEmail());
         return responseDTO;
@@ -202,8 +220,18 @@ public class AuthService {
         log.info("OAuth2 login successful for user: {}", email);
         //Now we have to log in the user by sending a LoginResponseDTO ---- It requires the JWT and the userId
         String accessToken = authUtil.generateAccessToken(user1);
-        LoginResponseDTO loginResponseDTO = new LoginResponseDTO(user1.getEmail(), user1.getRole(), accessToken);
-        loginResponseDTO.setRefreshToken(createRefreshToken(user1));
+        String refreshToken = createRefreshToken(user1);
+        LoginResponseDTO.UserDTO userDTO = LoginResponseDTO.UserDTO.builder()
+                .id(user1.getId())
+                .email(user1.getEmail())
+                .name(user1.getName())
+                .role(user1.getRole())
+                .build();
+        LoginResponseDTO loginResponseDTO = LoginResponseDTO.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(userDTO)
+                .build();
 
         return ResponseEntity.status(HttpStatus.OK).body(loginResponseDTO);
 

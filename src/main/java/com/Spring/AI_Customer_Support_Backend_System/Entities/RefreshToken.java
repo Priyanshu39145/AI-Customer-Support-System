@@ -37,4 +37,9 @@ public class RefreshToken {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    // Optimistic locking version to prevent race conditions when multiple
+    // concurrent refresh requests try to use the same token
+    @Version
+    private Long version;
 }

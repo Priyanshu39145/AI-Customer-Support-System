@@ -16,43 +16,37 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
-//Here we implement the AuthenticationSuccessHandler method --- which has the Authentication object along with the request responses objects
-//We first cast the Authentication object into OAuth2AuthenticationToken type ----
-//And then from that token --- we extract the OAuth2User using getPrinciple method
 public class oAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthService authService;
     private final ObjectMapper objectMapper;
+
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException, RuntimeException{
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, RuntimeException {
         OAuth2AuthenticationToken oAuth2AuthenticationToken = (OAuth2AuthenticationToken) authentication;
         OAuth2User oAuth2User = oAuth2AuthenticationToken.getPrincipal();
 
-        //This registrationId will be used to get the provider ID --- indicates us that the user has logged in from where
         String registrationId = oAuth2AuthenticationToken.getAuthorizedClientRegistrationId();
 
-        //We will handle the login using this method in AuthService ---
+        ResponseEntity<LoginResponseDTO> loginResponse = authService.handleOAuth2loginrequest(oAuth2User, registrationId);
+        LoginResponseDTO loginResponseDTO = loginResponse.getBody();
 
-        //IMP Method ---
-        //We send the oAuth2User from the login page and the registrationid received to the handleOAuth2loginRequest method
-        ResponseEntity<LoginResponseDTO> loginResponse = authService.handleOAuth2loginrequest(oAuth2User,registrationId);
+        // Redirect to frontend callback page with tokens in URL query params
+        // Frontend OAuth2CallbackPage will extract tokens, store in localStorage, and redirect to dashboard
+        String frontendUrl = "http://localhost:5174/oauth2/callback";
+        StringBuilder redirectUrl = new StringBuilder(frontendUrl);
+        redirectUrl.append("?accessToken=").append(URLEncoder.encode(loginResponseDTO.getAccessToken(), StandardCharsets.UTF_8));
+        redirectUrl.append("&refreshToken=").append(URLEncoder.encode(loginResponseDTO.getRefreshToken(), StandardCharsets.UTF_8));
 
-        //Now since we have got the LoginResponseDTO ---- we can configure the http response object to view the response
-        //First we set the HTTP Status ---
-        //Then we set the response type to JSON ---
-        //Then we use Object Mapper to write the contents of the LoginResponseDTO as String ---
+        // Add user data as encoded JSON
+        String userJson = objectMapper.writeValueAsString(loginResponseDTO.getUser());
+        redirectUrl.append("&user=").append(URLEncoder.encode(userJson, StandardCharsets.UTF_8));
 
-        response.setStatus(loginResponse.getStatusCode().value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(loginResponse.getBody()));
-
-
-
-
-
-
+        response.sendRedirect(redirectUrl.toString());
     }
 }

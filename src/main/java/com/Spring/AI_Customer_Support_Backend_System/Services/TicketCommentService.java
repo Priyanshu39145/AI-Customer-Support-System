@@ -5,6 +5,7 @@ import com.Spring.AI_Customer_Support_Backend_System.DTO.TicketCommentResponseDT
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Ticket;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.TicketComment;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.ActionType;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketCommentRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketRepository;
@@ -88,6 +89,10 @@ public class TicketCommentService {
     private void validateTicketParticipant(Ticket ticket, User user) {
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
+        }
+
+        if (user.getRole() == RoleType.ADMIN) {
+            return;
         }
 
         boolean isCreator = ticket.getCreatedBy() != null && user.getId().equals(ticket.getCreatedBy().getId());

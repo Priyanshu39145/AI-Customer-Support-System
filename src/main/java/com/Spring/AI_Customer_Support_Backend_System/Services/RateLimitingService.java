@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 @Slf4j
 public class RateLimitingService {
     //A single client allowed to make 10 requests per minute --
-    private static final int REQUEST_PER_MINUTE = 10;
+    private static final int REQUEST_PER_MINUTE = 10000;
 
     //Storage and Manager for Buckets --- (IP-Address -> Bucket)
     private final ProxyManager<String> proxyManager;

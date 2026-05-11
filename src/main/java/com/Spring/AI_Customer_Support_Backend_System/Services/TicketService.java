@@ -62,7 +62,11 @@ public class TicketService {
         PriorityType resolvedPriority = priority != null ? priority : PriorityType.MEDIUM;
         CategoryType resolvedCategory = category != null ? category : CategoryType.GENERAL;
 
+        // Find agent - returns null if no agents available
         User agent = findLeastLoadedAgentByCategory(resolvedCategory);
+        if (agent == null) {
+            log.warn("No agents available for category {} - ticket will be created without assignment", resolvedCategory);
+        }
 
         Ticket ticket = Ticket.builder()
                 .title(requestDTO.getTitle())
@@ -344,7 +348,8 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
 
-        if (!user.getId().equals(ticket.getCreatedBy().getId()) &&
+        if (user.getRole() != RoleType.ADMIN &&
+                !user.getId().equals(ticket.getCreatedBy().getId()) &&
                 (ticket.getAssignedTo() == null ||
                         !user.getId().equals(ticket.getAssignedTo().getId()))) {
 
@@ -359,17 +364,30 @@ public class TicketService {
         String assignedToId = ticket.getAssignedTo() != null
                 ? ticket.getAssignedTo().getId()
                 : null;
+        String assignedToName = ticket.getAssignedTo() != null
+                ? ticket.getAssignedTo().getName()
+                : null;
+        String assignedToEmail = ticket.getAssignedTo() != null
+                ? ticket.getAssignedTo().getEmail()
+                : null;
+        User createdBy = ticket.getCreatedBy();
 
         return new TicketDetailedResponseDTO(
-                ticketId,
+                ticket.getId(),
                 ticket.getTitle(),
                 ticket.getDescription(),
                 ticket.getStatus(),
                 ticket.getPriority(),
                 ticket.getCategory(),
                 conversationId,
-                ticket.getCreatedBy().getId(),
-                assignedToId
+                createdBy.getId(),
+                createdBy.getName(),
+                createdBy.getEmail(),
+                assignedToId,
+                assignedToName,
+                assignedToEmail,
+                ticket.getCreatedAt(),
+                ticket.getUpdatedAt()
         );
     }
 
@@ -454,6 +472,46 @@ public class TicketService {
         return tickets.map(this::mapToTicketResponseDTO);
     }
 
+    @Cacheable(
+            value = "searchticketsList",
+            key = "'ADMIN-ALL-' + (#keyword ?: 'ALL') + '-' + (#status ?: 'ALL') + '-' + (#priority ?: 'ALL') + '-' + (#category ?: 'ALL') + '-' + (#assignedToId ?: 'ALL') + '-' + (#createdFrom ?: 'NA') + '-' + (#createdTo ?: 'NA') + '-' + #page + '-' + #size",
+            unless = "#result == null || #result.content.isEmpty()"
+    )
+    public Page<TicketResponseDTO> getAllTicketsForAdmin(User user,
+                                                         String keyword,
+                                                         StatusType status,
+                                                         PriorityType priority,
+                                                         CategoryType category,
+                                                         String assignedToId,
+                                                         LocalDate createdFrom,
+                                                         LocalDate createdTo,
+                                                         int page,
+                                                         int size) {
+
+        if (user == null || user.getRole() != RoleType.ADMIN) {
+            throw new AccessDeniedException("Admin access required");
+        }
+
+        if (createdFrom != null && createdTo != null && createdFrom.isAfter(createdTo)) {
+            throw new IllegalArgumentException("Invalid date range");
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        LocalDateTime createdFromDateTime = createdFrom != null ? createdFrom.atStartOfDay() : null;
+        LocalDateTime createdToDateTime = createdTo != null ? createdTo.plusDays(1).atStartOfDay().minusNanos(1) : null;
+
+        return ticketRepository.searchAllTickets(
+                keyword,
+                status,
+                priority,
+                category,
+                assignedToId,
+                createdFromDateTime,
+                createdToDateTime,
+                pageable
+        ).map(this::mapToTicketResponseDTO);
+    }
+
 
     public User findLeastLoadedAgentByCategory(CategoryType category) {
         List<StatusType> activeStatuses = List.of(StatusType.OPEN, StatusType.IN_PROGRESS);
@@ -479,7 +537,7 @@ public class TicketService {
                 RoleType.AGENT,
                 activeStatuses,
                 firstAgent
-        ).stream().findFirst().orElseThrow(() -> new RuntimeException("No agents available"));
+        ).stream().findFirst().orElse(null);
     }
 
     public User findLeastLoadedAgent() {
@@ -502,6 +560,10 @@ public class TicketService {
     }
 
     private void validateTicketParticipant(Ticket ticket, User user) {
+        if (user.getRole() == RoleType.ADMIN) {
+            return;
+        }
+
         boolean isCreator = ticket.getCreatedBy() != null && user.getId().equals(ticket.getCreatedBy().getId());
         boolean isAssignedAgent = ticket.getAssignedTo() != null && user.getId().equals(ticket.getAssignedTo().getId());
 
@@ -520,14 +582,23 @@ public class TicketService {
     }
 
     private TicketResponseDTO mapToTicketResponseDTO(Ticket ticket) {
+        User createdBy = ticket.getCreatedBy();
+        User assignedTo = ticket.getAssignedTo();
+
         return new TicketResponseDTO(
                 ticket.getId(),
                 ticket.getTitle(),
                 ticket.getStatus(),
                 ticket.getPriority(),
                 ticket.getCategory(),
-                ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null,
-                ticket.getAssignedTo() != null ? ticket.getAssignedTo().getId() : null
+                createdBy != null ? createdBy.getId() : null,
+                createdBy != null ? createdBy.getName() : null,
+                createdBy != null ? createdBy.getEmail() : null,
+                assignedTo != null ? assignedTo.getId() : null,
+                assignedTo != null ? assignedTo.getName() : null,
+                assignedTo != null ? assignedTo.getEmail() : null,
+                ticket.getCreatedAt(),
+                ticket.getUpdatedAt()
         );
     }
 

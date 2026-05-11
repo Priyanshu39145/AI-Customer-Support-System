@@ -16,77 +16,111 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 
+/**
+ * JWT Authentication Filter.
+ *
+ * PRODUCTION FIX #5: Bypass auth endpoints
+ * - /auth/refresh uses REFRESH TOKEN only, not access token
+ * - This endpoint should not require JWT validation
+ * - Without this bypass, the filter would try to validate JWT
+ *   but /auth/refresh sends refresh token in body, not JWT in header
+ * - This would cause 401 errors on refresh attempts
+ */
 @RequiredArgsConstructor
-//It is declared as a Component for generating a bean ---
 @Component
-//it is normal log framework from which we can display custom log messages inside the terminal --- log.info
 @Slf4j
-//Using JwtAuthFilter it has to extend the OncePerRequestFilter class and override the doFilterinternal method ----
-//This method is responsible for the custom filter we are adding ---
 public class JWTAuthFilter extends OncePerRequestFilter {
 
     private final AuthUtil authUtil;
     private final UserRepository userRepository;
-
     private final HandlerExceptionResolver handlerExceptionResolver;
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
+    /**
+     * Endpoints that should bypass JWT authentication.
+     * These endpoints either don't need auth or use different auth mechanisms.
+     */
+    private static final String[] BYPASS_PATHS = {
+        "/auth/refresh",  // Uses refresh token in request body
+        "/auth/logout",   // Session handled differently
+        "/auth/login",   // No auth needed
+        "/auth/register", // Registration doesn't need JWT
+        "/oauth2/",    // OAuth2 flow endpoints
+    };
+
+    /**
+     * Check if request should bypass JWT filter.
+     */
+    private boolean shouldBypass(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+
+        // Skip CORS preflight
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            return true;
+        }
+
+        // Check bypass paths
+        for (String bypassPath : BYPASS_PATHS) {
+            if (path.contains(bypassPath)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return shouldBypass(request);
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
         try {
-            //We display a custom log message where we display the request URL ---
-            log.info("incoming request: {}" , request.getRequestURI());
+            log.debug("JWTAuthFilter processing: {}", request.getRequestURI());
 
-
-            //We first get the Request header where the JWT Token will be stored ---
-            //We are getting the String under the header Authorization ---
-            //In normal header JWT is stored as "Bearer ygruygrhjlqdio2rjkl.qVRUQVUOUQKEFBUWF.qkhgefvyvfutyvuovjqf" ---- Bearer space then the token
+            // Get Authorization header
             final String header = request.getHeader("Authorization");
-            log.info("Authorization header: {}", header);
 
-            //We check if the header is not null or valid
-            if(header== null || !header.startsWith("Bearer "))   {
-                //If the header is null or not valid(Doesnt start with Bearer) --- then we go on to the next Filter --- without setting the Security Context ----
-                filterChain.doFilter(request,response);
+            // No valid Authorization header - let it pass through
+            // Security config will handle unauthorized access
+            if (header == null || !header.startsWith("Bearer ")) {
+                filterChain.doFilter(request, response);
                 return;
             }
 
-            //Then we have to extract the JWT token from the header
-            //We remove "Bearer " from the string
+            // Extract JWT token (everything after "Bearer ")
             String token = header.substring(7);
-            log.debug("JWT token extracted");
-            //Then we have to get the userName from the token ---
-            //Refer to the getUserNamefromToken method in AuthUtil
+
+            // Get username from token
             String username = authUtil.getUserNamefromToken(token);
-            log.debug("Username extracted from token: {}", username);
-            //If the username is not null and the SecurityContextHolder doesnt have an user ---- then we proceed to check for the user
-            //After getting the user from the database we create a UsernamePasswordAuthenticationToken --- using the User object
-            //We then set the SecurtiyContextHolder with the userToken created ----
-            //Then we successfully go to the next filter
-            if(username!=null && SecurityContextHolder.getContext().getAuthentication()==null)  {
-                User user = userRepository.findByEmail(username).orElseThrow();
 
-                //For the authorities we set the user.getAuthorities with the authority --- the user has  ---
-                //So that we can know about the user roles from the JWT and allow role based access --
-                System.out.println(user.getAuthorities());
-                UsernamePasswordAuthenticationToken userToken = new UsernamePasswordAuthenticationToken(user,null,user.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(userToken);
-
-                log.info("User authenticated successfully: {}", username);
+            if (username == null) {
+                filterChain.doFilter(request, response);
+                return;
             }
 
-            //If the next filter also sees the SecurityContextHolder has a userToken --- then it passes and goes on to the next Filter
-            filterChain.doFilter(request,response);
+            // Check if SecurityContext already has authentication
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                // Load user from database
+                User user = userRepository.findByEmail(username).orElse(null);
+
+                if (user != null) {
+                    // Create authentication token with user's authorities
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    log.debug("User authenticated: {}", username);
+                }
+            }
+
+            // Continue with filter chain
+            filterChain.doFilter(request, response);
+        } catch (Exception e) {
+            log.error("JWTAuthFilter error: {}", e.getMessage());
+            handlerExceptionResolver.resolveException(request, response, null, e);
         }
-        catch(Exception e)  {
-            //we send the request, response, handler and the exception objects
-            log.error("Error occurred in JWTAuthFilter: {}", e.getMessage(), e);
-            handlerExceptionResolver.resolveException(request,response,null,e);
-        }
-
-
-
-
     }
-
 }
