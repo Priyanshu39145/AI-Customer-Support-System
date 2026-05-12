@@ -40,9 +40,36 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 
-# Application secrets
-application.properties
 
 # OS
 .DS_Store
+
+
+# Frontend cache
+frontend/.vite/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Frontend logs
+frontend/*.log
+
+# Maven wrapper logs
+.maven/
+
+# Mac system files
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+
+# Ollama
+ollama/
+
+# Redis dump
+dump.rdb
 
