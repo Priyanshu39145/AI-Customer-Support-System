@@ -5,18 +5,10 @@ import lombok.Data;
 
 @Data
 @Builder
-public class DashboardStatsDTO {
+public class AgentDashboardStatsDTO {
 
     private long totalTickets;
-
     private long openTickets;
-
     private long inProgressTickets;
-
-
-    private long closedTickets;
-
-    private long totalConversations;
-
-    private long activeConversations;
+    private long resolvedTickets;
 }

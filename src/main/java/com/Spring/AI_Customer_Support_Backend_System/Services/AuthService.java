@@ -193,23 +193,30 @@ public class AuthService {
         User user2 = userRepository.findByEmail(email).orElse(null);
 
         //Now if both the user1 and user2 is null then we are sure that the user is not in the database and we need to signup that user
-        if(user1==null && user2==null)  {
-            log.info("OAuth2 new user detected. Registering: {}", email);
-            //We use the signupReturningUser method which returns a User(Conventional signup method gives us the SignUpResponseDTO --- so to get the user object from it we make another method here which returns the User directly) --- and requires an LoginRequestDTO consisting of username and password --- password is set to null ---- as oAuth2 doesnt require passwords ---
-            //Now since there are two more ---- attributes in User --- providerId and providerType --- so we have to also send them to the signup method to set to the User
-            //During addition of Role Based access --- since we are associating the User with Patient --- we need a SignupRequestDTO ---- containing the Patient not nullable info too ---- so we configure SignUpRequestDTO here instead of LoginRequestDTO
-            user1 = registerByOAuth2(name,email,providerId,authProviderType);
+        if (user1 == null && user2 == null) {
+
+            // Completely new OAuth user
+            user1 = registerByOAuth2(name, email, providerId, authProviderType);
+
         }
-        //If we have a user from the Provider ---
-        //And we have also received the email ---
-        //But the email is not equal to the username of the user ---- then we know that the username doesnt have the email ---
-        //See the above findUserNameFromoAuthUser code ---- There we have saved the username with different fields if we didnt get the email ---- So we need to set the username with email here ---
-        else if(user1!=null)    {
-            if(email!=null && !email.isBlank() && !email.equals(user1.getUsername()))   {
-                log.info("Updating email for OAuth2 user: {}", email);
+        else if (user1 != null) {
+
+            // Existing OAuth user
+            if (email != null && !email.isBlank() && !email.equals(user1.getEmail())) {
                 user1.setEmail(email);
                 userRepository.save(user1);
             }
+
+        }
+        else if (user1 == null && user2 != null) {
+
+            // Existing normal account logging in with Google first time
+            user2.setProviderId(providerId);
+            user2.setProviderType(authProviderType);
+
+            userRepository.save(user2);
+
+            user1 = user2;
         }
         //If the user exists with the email and also the email is equal to the username ---
         //Then we need not create another user --- we throw an Exception

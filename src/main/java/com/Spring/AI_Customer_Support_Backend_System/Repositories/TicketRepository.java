@@ -166,4 +166,8 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     long countByAssignedToAndStatus(User assignedTo, StatusType status);
 
     long countByAssignedToAndPriority(User assignedTo, PriorityType priority);
+
+    long countByAssignedToId(String agentId);
+
+    long countByAssignedToIdAndStatus(String agentId, StatusType status);
 }

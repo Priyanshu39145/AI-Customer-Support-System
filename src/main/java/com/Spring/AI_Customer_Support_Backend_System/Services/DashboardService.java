@@ -19,39 +19,51 @@ public class DashboardService {
     private final TicketRepository ticketRepository;
 
     public DashboardStatsDTO getStats(User user) {
+
         if(user == null) {
             throw new AccessDeniedException("Authentication required");
         }
 
-        log.info("Fetching dashboard stats | userId: {}, role: {}", user.getId(), user.getRole());
+        log.info(
+                "Fetching dashboard stats | userId: {}, role: {}",
+                user.getId(),
+                user.getRole()
+        );
 
         if(user.getRole() == RoleType.ADMIN) {
-            return new DashboardStatsDTO(
-                    ticketRepository.countByStatus(StatusType.OPEN),
-                    ticketRepository.countByStatus(StatusType.CLOSED),
-                    ticketRepository.countByPriority(PriorityType.HIGH),
-                    ticketRepository.count(),
-                    0
-            );
+
+            return DashboardStatsDTO.builder()
+                    .totalTickets(ticketRepository.count())
+                    .openTickets(ticketRepository.countByStatus(StatusType.OPEN))
+                    .inProgressTickets(ticketRepository.countByStatus(StatusType.IN_PROGRESS))
+
+                    .closedTickets(ticketRepository.countByStatus(StatusType.CLOSED))
+                    .totalConversations(0)
+                    .activeConversations(0)
+                    .build();
         }
 
         if(user.getRole() == RoleType.AGENT) {
-            long assignedToMe = ticketRepository.countByAssignedTo(user);
-            return new DashboardStatsDTO(
-                    ticketRepository.countByAssignedToAndStatus(user, StatusType.OPEN),
-                    ticketRepository.countByAssignedToAndStatus(user, StatusType.CLOSED),
-                    ticketRepository.countByAssignedToAndPriority(user, PriorityType.HIGH),
-                    assignedToMe,
-                    assignedToMe
-            );
+
+            return DashboardStatsDTO.builder()
+                    .totalTickets(ticketRepository.countByAssignedTo(user))
+                    .openTickets(ticketRepository.countByAssignedToAndStatus(user, StatusType.OPEN))
+                    .inProgressTickets(ticketRepository.countByAssignedToAndStatus(user, StatusType.IN_PROGRESS))
+
+                    .closedTickets(ticketRepository.countByAssignedToAndStatus(user, StatusType.CLOSED))
+                    .totalConversations(0)
+                    .activeConversations(0)
+                    .build();
         }
 
-        return new DashboardStatsDTO(
-                ticketRepository.countByCreatedByAndStatus(user, StatusType.OPEN),
-                ticketRepository.countByCreatedByAndStatus(user, StatusType.CLOSED),
-                ticketRepository.countByCreatedByAndPriority(user, PriorityType.HIGH),
-                ticketRepository.countByCreatedBy(user),
-                0
-        );
+        return DashboardStatsDTO.builder()
+                .totalTickets(ticketRepository.countByCreatedBy(user))
+                .openTickets(ticketRepository.countByCreatedByAndStatus(user, StatusType.OPEN))
+                .inProgressTickets(ticketRepository.countByCreatedByAndStatus(user, StatusType.IN_PROGRESS))
+
+                .closedTickets(ticketRepository.countByCreatedByAndStatus(user, StatusType.CLOSED))
+                .totalConversations(0)
+                .activeConversations(0)
+                .build();
     }
 }

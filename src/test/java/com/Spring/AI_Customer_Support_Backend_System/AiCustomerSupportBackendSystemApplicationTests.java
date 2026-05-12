@@ -32,7 +32,7 @@ class AiCustomerSupportBackendSystemApplicationTests {
 	@Test
 	void makeagent()	{
 		try	{
-			User user = userRepository.findByEmail("shiulykarmakar81@gmail.com").orElse(null);
+			User user = userRepository.findByEmail("rima@gmail.com").orElse(null);
 			if(user==null)
 				throw new Exception();
 			user.setRole(RoleType.AGENT);
