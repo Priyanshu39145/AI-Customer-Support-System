@@ -67,6 +67,98 @@ This architecture prevents:
 
 ---
 
+---
+
+# 🎨 Frontend System
+
+A complete modern frontend has been built for the platform using:
+
+- React + TypeScript
+- Vite
+- Tailwind CSS
+- React Query
+- React Router
+- Recharts
+
+---
+
+# 🖥️ Frontend Features
+
+Implemented frontend features include:
+
+- JWT Authentication
+- OAuth2 Login
+- Protected Routes
+- Role-Based Dashboards
+- AI Chat Interface
+- Ticket Management System
+- Ticket Comments & Activity History
+- Conversation Management
+- Admin Panel
+- Agent Management
+- User Role Management
+- Company Policy Upload UI
+- Responsive UI for Desktop & Mobile
+- Dark Mode Support
+- Real-Time Data Fetching with React Query
+
+---
+
+# 👥 Role-Based Frontend
+
+The frontend dynamically changes based on user roles:
+
+```text
+USER
+AGENT
+ADMIN
+```
+
+Each role has its own:
+
+- dashboard
+- sidebar navigation
+- accessible routes
+- permissions
+- workflows
+
+---
+
+# 📊 Dashboard System
+
+Implemented separate dashboards for:
+
+- Users
+- Agents
+- Admins
+
+Including:
+
+- ticket analytics
+- charts
+- ticket distribution
+- resolution metrics
+- assigned ticket tracking
+
+---
+
+# ⚡ Frontend Architecture
+
+```text
+frontend/src
+│
+├── components
+├── contexts
+├── layouts
+├── pages
+├── services
+└── styles
+```
+
+The frontend uses reusable UI components and centralized API services for scalability and maintainability.
+
+---
+
 # 🔐 Authentication & Security System
 
 ## Email + Password Authentication
