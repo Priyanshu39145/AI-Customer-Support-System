@@ -4,8 +4,10 @@ import com.Spring.AI_Customer_Support_Backend_System.Security.JWTAuthFilter;
 import com.Spring.AI_Customer_Support_Backend_System.Services.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -16,6 +18,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -28,6 +31,7 @@ public class SecurityConfig {
     private final oAuth2SuccessHandler oauth2successHandler;
     private final HandlerExceptionResolver handlerExceptionResolver;
     private final RateLimitFilter rateLimitFilter;
+    private final Environment environment;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -81,8 +85,9 @@ public class SecurityConfig {
     // CORS configuration allowing frontend origin with all common methods and headers
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow frontend origin (React Vite dev server)
-        configuration.setAllowedOrigins(List.of("http://localhost:5174"));
+        // Allow frontend origins from application.properties
+        String allowedOrigins = environment.getProperty("app.cors.allowed-origins", "http://localhost:5174");
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         // Allow common HTTP methods needed for CORS
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         // Allow common headers including Authorization for JWT token
