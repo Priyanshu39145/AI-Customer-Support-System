@@ -1,0 +1,135 @@
+services:
+
+  # =========================
+  # MariaDB Database Container
+  # =========================
+  mariadb:
+    image: mariadb:11.8
+
+    container_name: ai-mariadb
+
+    environment:
+      MARIADB_ROOT_PASSWORD: root1234
+      MARIADB_DATABASE: AI_CUSTOMER_SUPPORT
+
+    ports:
+      # HOST:CONTAINER
+      # Your laptop uses 3308
+      # Inside docker network it is STILL 3306
+      - "3308:3306"
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+    # VERY IMPORTANT
+    # This waits until MariaDB becomes fully ready
+    # before backend starts
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-proot1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+
+  # =========================
+  # Redis Container
+  # =========================
+  redis:
+    image: redis
+
+    container_name: ai-redis
+
+    ports:
+      - "6379:6379"
+
+
+
+  # =========================
+  # Ollama Container
+  # =========================
+  ollama:
+    image: ollama/ollama
+
+    container_name: ai-ollama
+
+    ports:
+      - "11434:11434"
+
+    volumes:
+      - ollama_data:/root/.ollama
+
+    healthcheck:
+      test: [ "CMD", "ollama", "list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+
+
+  # =========================
+  # Spring Boot Backend
+  # =========================
+  backend:
+    build: .
+
+    container_name: ai-backend
+
+    ports:
+      - "8080:8080"
+
+    env_file:
+      - .env
+
+    environment:
+
+      # Docker containers communicate
+      # using service names
+      REDIS_HOST: redis
+
+      # Ollama internal docker URL
+      OLLAMA_BASE_URL: http://ollama:11434
+
+      # Frontend URLs allowed for CORS
+      CORS_ALLOWED_ORIGINS: http://localhost:5174
+
+    depends_on:
+
+      # Backend waits until MariaDB is healthy
+      mariadb:
+        condition: service_healthy
+
+      # Redis and Ollama only need started state
+      redis:
+        condition: service_started
+
+      ollama:
+        condition: service_healthy
+
+
+
+  # =========================
+  # React Frontend
+  # =========================
+  frontend:
+    build: ./frontend
+
+    container_name: ai-frontend
+
+    ports:
+      - "5174:5174"
+
+    depends_on:
+      - backend
+
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+
+
+
+# =========================
+# Docker Volumes
+# =========================
+volumes:
+  mariadb_data:
+  ollama_data:

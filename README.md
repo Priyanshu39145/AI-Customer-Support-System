@@ -1137,45 +1137,264 @@ src/main/java
 
 ---
 
-# ⚙️ Setup Instructions
+---
 
-## Clone Repository
+# 🐳 Full Dockerized Setup Guide
+
+## 📋 Prerequisites
+
+Make sure the following are installed on your system:
+
+| Software | Version Recommended |
+|---|---|
+| Docker Desktop | Latest |
+| Git | Latest |
+| Java | 21 |
+| Maven | 3.9+ |
+
+---
+
+# 📥 Clone Repository
 
 ```bash
 git clone https://github.com/your-username/AI-Customer-Support-Backend-System.git
+
 cd AI-Customer-Support-Backend-System
 ```
 
 ---
 
-## Pull Ollama Models
+# ⚙️ Environment Configuration
 
-```bash
-ollama pull llama3.1
-ollama pull llama3.2:3b
-ollama pull nomic-embed-text
+Create a `.env` file in the root directory.
+
+Example:
+
+```env
+JWTSECRET=your_super_secret_key
+
+OAUTH_CLIENT_ID=your_google_client_id
+OAUTH_CLIENT_SECRET=your_google_client_secret
+
+DATASOURCE_URL=jdbc:mariadb://mariadb:3306/AI_CUSTOMER_SUPPORT
+DATASOURCE_USERNAME=root
+DATASOURCE_PASSWORD=root1234
+
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_gmail_app_password
 ```
 
 ---
 
-## Start Services
+# 🔐 Google OAuth2 Setup
+
+Create OAuth credentials from Google Cloud Console:
+
+https://console.cloud.google.com
+
+Add authorized redirect URI:
+
+```text
+http://localhost:8080/login/oauth2/code/google
+```
+
+---
+
+# 📧 Gmail App Password Setup
+
+This project uses Gmail SMTP.
+
+Generate an App Password from:
+
+https://myaccount.google.com/security
+
+Use the generated password inside:
+
+```env
+MAIL_PASSWORD=your_app_password
+```
+
+---
+
+# 🤖 Pull Ollama Models
+
+Start containers first:
 
 ```bash
 docker compose up -d
 ```
 
-Services:
+Then pull required models inside Docker:
 
+```bash
+docker exec -it ai-ollama ollama pull llama3.2:3b
+
+docker exec -it ai-ollama ollama pull llama3.1
+
+docker exec -it ai-ollama ollama pull nomic-embed-text
+```
+
+Verify installed models:
+
+```bash
+docker exec -it ai-ollama ollama list
+```
+
+---
+
+# 🚀 Start Entire Application
+
+Build and start all containers:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- Spring Boot Backend
+- React Frontend
 - MariaDB
 - Redis
 - Ollama
 
 ---
 
-## Run Application
+# 🌐 Application URLs
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5174 |
+| Backend | http://localhost:8080 |
+| Ollama API | http://localhost:11434 |
+
+---
+
+# 🧠 First Startup Notes
+
+The first startup may take several minutes because:
+
+- Docker images are downloaded
+- Ollama models are initialized
+- Maven dependencies are built
+- Database schema is generated
+
+---
+
+# 🔄 Rebuild After Code Changes
+
+If backend code changes:
 
 ```bash
-./mvnw spring-boot:run
+./mvnw clean package -DskipTests
+```
+
+Then rebuild containers:
+
+```bash
+docker compose down
+
+docker compose build --no-cache
+
+docker compose up
+```
+
+---
+
+# 🛑 Stop Application
+
+```bash
+docker compose down
+```
+
+---
+
+# 🧹 Remove All Docker Volumes
+
+WARNING:  
+This deletes database data and Ollama models.
+
+```bash
+docker compose down -v
+```
+
+---
+
+# ⚡ Recommended System Requirements
+
+| Resource | Recommended |
+|---|---|
+| RAM | 16 GB |
+| CPU | 6+ cores |
+| Storage | 15+ GB free |
+
+---
+
+# 🔥 Production Optimization Notes
+
+For lower memory usage:
+
+- use only `llama3.2:3b`
+- reduce Ollama context size
+- reduce Ollama threads
+- serve frontend using nginx instead of Vite dev server
+
+---
+
+# 🧪 Default Roles
+
+Supported roles:
+
+```text
+USER
+AGENT
+ADMIN
+```
+
+Admin users can:
+
+- manage agents
+- assign tickets
+- update priorities
+- manage categories
+- upload company policies
+
+---
+
+# 🛠️ Troubleshooting
+
+## Ollama Connection Issues
+
+Verify containers:
+
+```bash
+docker ps
+```
+
+Test Ollama API:
+
+```bash
+docker exec -it ai-backend curl http://ai-ollama:11434/api/tags
+```
+
+---
+
+## Backend Not Updating
+
+Rebuild backend image:
+
+```bash
+docker compose build --no-cache backend
+```
+
+---
+
+## Port Already In Use
+
+Stop conflicting services or change ports inside:
+
+```text
+docker-compose.yml
 ```
 
 ---

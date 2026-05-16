@@ -18,8 +18,8 @@ import { AgentTicketsPage } from '@/pages/agent/AgentTicketsPage';
 import { AgentTicketDetailPage } from '@/pages/agent/AgentTicketDetailPage';
 import { PageLoader } from '@/components/UI/LoadingSpinner';
 import { getRefreshToken } from '@/services/api';
-import UploadCompanyPolicyPage from '@/pages/Admin/UploadCompanyPolicyPage';
-import { UsersPage } from '@/pages/Admin/UsersPage';
+import { UploadCompanyPolicyPage } from '@/pages/admin/UploadCompanyPolicyPage';
+import { UsersPage } from '@/pages/admin/UsersPage';
 
 const AgentDashboardPage = () => <DashboardPage />;
 
