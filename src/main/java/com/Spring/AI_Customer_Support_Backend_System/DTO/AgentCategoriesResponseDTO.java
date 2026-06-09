@@ -17,3 +17,4 @@ public class AgentCategoriesResponseDTO {
     private String email;
     private Set<CategoryType> categories;
 }
+//Done

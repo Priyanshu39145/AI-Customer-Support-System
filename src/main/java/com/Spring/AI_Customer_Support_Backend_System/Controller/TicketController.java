@@ -29,6 +29,7 @@ public class TicketController {
 
     private final TicketService ticketService;
 
+    //Here user can create tickets for itself --- manually ----
     @PostMapping("/tickets")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<CreateTicketResponseDTO> createTicket( @Valid @RequestBody CreateTicketRequestDTO requestDTO) {
@@ -37,6 +38,7 @@ public class TicketController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(user, requestDTO, null, PriorityType.MEDIUM, category));
     }
 
+    //It shows inside the Agent Workflow ---- where the Agent can change the status of the ticket from Open to In Progress and from In Progress to Closed
     @PutMapping("/tickets/{ticketId}/status")
     @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<TicketResponseDTO> changeStatus(@PathVariable("ticketId") String ticketId, @RequestParam StatusType status)  {
@@ -44,6 +46,8 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.changeStatus(user,ticketId, status));
     }
 
+    //It is also shown inside the Agent Workflow --- where the Agent can dynamically change the priority of the ticket according to his or her need --- and instructions ---
+    //AI can be unreliable so Agent needs to override and manually change the priority ----
     @PutMapping("/tickets/{ticketId}/priority")
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     public ResponseEntity<TicketResponseDTO> changePriority(@PathVariable("ticketId") String ticketId,
@@ -51,7 +55,8 @@ public class TicketController {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ticketService.changePriority(user, ticketId, priority));
     }
-
+    //It is also shown inside the Agent Workflow --- where the Agent can dynamically change the category of the ticket according to his or her need --- and instructions ---
+    //AI can be unreliable so Agent or Admin needs to override and manually change the category ----
     @PutMapping("/tickets/{ticketId}/category")
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     public ResponseEntity<TicketResponseDTO> changeCategory(@PathVariable("ticketId") String ticketId,
@@ -60,6 +65,8 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.changeCategory(user, ticketId, category));
     }
 
+    //Assigning an agent is the function of the admin ---
+    //Admin can also manually assign agent for following tickets ----
     @PutMapping("/tickets/{ticketId}/assign")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TicketResponseDTO> assignTicket(@PathVariable("ticketId") String ticketId,
@@ -67,7 +74,8 @@ public class TicketController {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ticketService.assignTicket(user, ticketId, agentId));
     }
-
+    //Getting all the tickets --- for the admin ----
+    //Admin can search tickets on basis of all parameters --- keyword,status, priority, category, agent and createdFrom and to
     @GetMapping("/tickets")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<TicketResponseDTO>> getAllTickets(@RequestParam(defaultValue = "0") int page,
@@ -90,7 +98,8 @@ public class TicketController {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ticketService.getTicketById(ticketId,user));
     }
-
+    //Now we bring out the ticketHistory ----
+    //See the TicketActivity entity first ----
     @GetMapping("/tickets/{ticketId}/history")
     @PreAuthorize("hasAnyRole('USER', 'AGENT', 'ADMIN')")
     public ResponseEntity<List<TicketActivityResponseDTO>> getTicketHistory(@PathVariable String ticketId) {
@@ -98,6 +107,8 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getTicketHistory(ticketId, user));
     }
 
+
+    //Here we get the tickets of a particular user ----
     @GetMapping("/users/me/tickets")
     @PreAuthorize("hasAnyRole('USER', 'AGENT')")
     public ResponseEntity<Page<TicketResponseDTO>> getTicketsOfUser(@RequestParam(defaultValue = "0") int page,
@@ -113,6 +124,7 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getTicketsOfUser(user,keyword,status,priority,category,assignedToId,createdFrom,createdTo,page,size));
     }
 
+    //Here we get the tickets assigned to a current agent ----
     @GetMapping("/agents/me/tickets")
     @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<Page<TicketResponseDTO>> getTicketsAssignedToCurrentAgent(@RequestParam(defaultValue = "0") int page,

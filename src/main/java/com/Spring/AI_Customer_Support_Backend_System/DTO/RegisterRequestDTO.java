@@ -18,3 +18,4 @@ public class RegisterRequestDTO {
     @NotBlank(message = "Password is required")
     private String password;
 }
+//This carries the user credentials supplied by the frontend --- validation is provided ----

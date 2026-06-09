@@ -20,7 +20,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepository userRepository;
-
+    //Here using the current user we just fetch the details of the user and return in UserProfileDTO format ----
     @GetMapping("/users/me")
     public ResponseEntity<UserProfileDTO> getCurrentUser() {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -33,6 +33,8 @@ public class UserController {
     }
 
 
+    //This endpoint is only Admin only ---- it allows the admin to make an User Admin or Agent ----
+    //Here using the given role in UpdateRoleRequestDTO --- we just change the user role --- in the database ----
     @PutMapping("/admin/users/{userId}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<User> updateUserRole(
@@ -46,6 +48,8 @@ public class UserController {
     }
 
 
+    //In this case we provide the Admin all the user details(User and Agents all)  ---- So that it can view them and change roles accordingly ---
+    //Here we give the direct entity only
     @GetMapping("/admin/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getAllUsers() {
@@ -54,6 +58,7 @@ public class UserController {
     }
 
 
+    //Here similarly ---- we give the admin ---- all the agents ----
     @GetMapping("/admin/agents")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getAllAgents() {

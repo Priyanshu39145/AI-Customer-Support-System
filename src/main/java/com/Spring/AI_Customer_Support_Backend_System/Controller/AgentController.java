@@ -17,7 +17,7 @@ import java.util.List;
 public class AgentController {
 
     private final AgentService agentService;
-
+    //Here the Admin can assign categories for the agents --- after they are made -----
     @PutMapping("/agents/{agentId}/categories")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AgentCategoriesResponseDTO> assignCategories(@PathVariable String agentId,
@@ -25,6 +25,7 @@ public class AgentController {
         return ResponseEntity.ok(agentService.assignCategories(agentId, requestDTO));
     }
 
+    //Fetching all the agents ----
     @GetMapping("/agents")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AgentResponseDTO>> getAgents() {

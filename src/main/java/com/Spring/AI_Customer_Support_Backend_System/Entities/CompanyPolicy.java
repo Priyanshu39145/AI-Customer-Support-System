@@ -31,7 +31,7 @@ public class CompanyPolicy {
     private String fileName;
 
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String fileHash;
 
     @Column(nullable = false)
@@ -40,3 +40,9 @@ public class CompanyPolicy {
     @Column(nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 }
+
+//We have a fileName
+//Filehash prevents uploading of duplicate files inside the RAG DB ----
+//If we upload files of similar fileName but we have different content ---
+// then we increase the version of the new file by 1 --- as it is of a new version ---
+//uploadedAt stores the creation timestamp ---

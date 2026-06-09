@@ -14,3 +14,4 @@ public class UserProfileDTO {
     private String email;
     private RoleType role;
 }
+//Done

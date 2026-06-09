@@ -18,3 +18,4 @@ public class MessageResponseDTO implements Serializable {
     private String userId;
     private LocalDateTime createdAt;
 }
+//This Response DTO is used to see all the related information of a message--- whether it is of USER or AI ---

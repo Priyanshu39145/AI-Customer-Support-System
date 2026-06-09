@@ -54,3 +54,4 @@ public interface UserRepository extends JpaRepository<User, String> {
                                                @Param("statuses") List<StatusType> statuses,
                                                Pageable pageable);
 }
+//Done

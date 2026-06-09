@@ -24,7 +24,16 @@ public class SecurityValidationService {
             "act as",
             "pretend you are",
             "override",
-            "bypass"
+            "bypass",
+            "assistant:",
+            "developer:",
+            "ignore all instructions",
+            "ignore all rules",
+            "forget previous instructions",
+            "jailbreak",
+            "act as chatgpt",
+            "act as system",
+            "roleplay as"
     );
 
     private static final List<String> ABUSE_PATTERNS = List.of(
@@ -46,6 +55,7 @@ public class SecurityValidationService {
     public String validateEscalationRequest(String message, IntentContextDTO context) {
 
         // Check 1: Injection pattern detection
+        //We detect here prompt injection from a set of keywords ----
         String injectionError = detectInjectionPatterns(message);
         if (injectionError != null) {
             log.warn("Injection pattern detected | userId: {}, pattern: {}",
@@ -54,6 +64,7 @@ public class SecurityValidationService {
         }
 
         // Check 2: Rate limiting (tickets per hour/day)
+        //We here check if the user has exceeded the daily ticket creation quota of the day or not ---
         String rateLimitError = checkTicketRateLimits(context);
         if (rateLimitError != null) {
             log.warn("Rate limit exceeded | userId: {}, ticketsToday: {}, ticketsThisHour: {}",
@@ -72,6 +83,7 @@ public class SecurityValidationService {
             return timingError;
         }
 
+        //If all security Checks passed --- then we return null ----
         return null; // All checks passed
     }
 
@@ -79,13 +91,13 @@ public class SecurityValidationService {
         if (message == null) return null;
 
         String lowerMessage = message.toLowerCase();
-
+        //If the message contains the keywords defined inside the INJECTION_PATTERNS --- then we say it contains suspicious content
         for (String pattern : INJECTION_PATTERNS) {
             if (lowerMessage.contains(pattern)) {
                 return "Your message contains suspicious content. Please rephrase your request.";
             }
         }
-
+        //If the message contains the keywords defined inside the ABUSE_PATTERNS --- then we say it contains abusive content
         for (String pattern : ABUSE_PATTERNS) {
             if (lowerMessage.contains(pattern)) {
                 return "Your request appears abusive. Please describe the actual issue you need help with.";
@@ -95,6 +107,7 @@ public class SecurityValidationService {
         return null;
     }
 
+    //If user has exceeded the hourly or daily ticket creation quota ---- then we say that the user has hit rate limit ---
     private String checkTicketRateLimits(IntentContextDTO context) {
         if (context.getTicketsCreatedThisHour() >= MAX_TICKETS_PER_HOUR) {
             return "You've created too many tickets recently. Please wait before creating another ticket.";
@@ -107,13 +120,14 @@ public class SecurityValidationService {
         return null;
     }
 
+    //We get the time of the last ticket created by the user ---- and then find the seconds after which the new ticket is supposed to be created ---
     private String checkTicketCreationTiming(IntentContextDTO context) {
         if (context.getLastTicketCreatedAt() == null) {
             return null; // First ticket ever, allow it
         }
 
         long secondsSinceLastTicket = calculateSecondsSinceLastTicket(context);
-
+        //If
         if (secondsSinceLastTicket < MIN_SECONDS_BETWEEN_TICKETS) {
             return "Please wait a moment before creating another ticket.";
         }

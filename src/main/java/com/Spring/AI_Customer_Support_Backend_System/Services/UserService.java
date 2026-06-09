@@ -13,7 +13,7 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-
+    //We just change the user Role here ---- first we check if the User is found or not --- then change it ----
     @Transactional
     public User updateUserRole(String userId, RoleType roleType) {
 

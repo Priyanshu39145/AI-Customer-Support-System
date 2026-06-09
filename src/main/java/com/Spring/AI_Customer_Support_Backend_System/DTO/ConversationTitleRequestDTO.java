@@ -15,3 +15,4 @@ public class ConversationTitleRequestDTO {
     @Size(max = 80, message = "Title cannot exceed 80 characters")
     private String title;
 }
+//We use this DTO to rename a title with a new title ----

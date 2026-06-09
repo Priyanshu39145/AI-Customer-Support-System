@@ -29,7 +29,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 @Component
 @Slf4j
-public class JWTAuthFilter extends OncePerRequestFilter {
+public class JWTAuthFilter extends OncePerRequestFilter { //OncePerRequestFilter ---- This filter runs ONLY ONCE per request.
 
     private final AuthUtil authUtil;
     private final UserRepository userRepository;
@@ -39,6 +39,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
      * Endpoints that should bypass JWT authentication.
      * These endpoints either don't need auth or use different auth mechanisms.
      */
+    //These endpoints are public and dont need JWT Authentication ---
     private static final String[] BYPASS_PATHS = {
         "/auth/refresh",  // Uses refresh token in request body
         "/auth/logout",   // Session handled differently
@@ -50,6 +51,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     /**
      * Check if request should bypass JWT filter.
      */
+    //This method checks if the incoming request should be bypassed or not according to the rules ---
     private boolean shouldBypass(HttpServletRequest request) {
         String path = request.getRequestURI();
         String method = request.getMethod();
@@ -69,7 +71,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         return false;
     }
 
-    @Override
+    @Override //Here Spring Security internally asks --- should I skip this request --- and I answer by returning true or false according to should bypass or not
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return shouldBypass(request);
     }
@@ -95,7 +97,8 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             String token = header.substring(7);
 
             // Get username from token
-            String username = authUtil.getUserNamefromToken(token);
+            //This method internally validates the token using the secret key and then it returns the user from the token ---
+            String username = authUtil.getUserNamefromToken(token); // --- See the getUserNamefromToken method in authUtil ---
 
             if (username == null) {
                 filterChain.doFilter(request, response);
@@ -108,7 +111,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 User user = userRepository.findByEmail(username).orElse(null);
 
                 if (user != null) {
-                    // Create authentication token with user's authorities
+                    // Create authentication token with user's authorities --- and then set it inside the SecurityContextHolder
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authToken);
@@ -124,3 +127,26 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         }
     }
 }
+
+//Complete Flow ---
+/*
+Incoming Request
+       ↓
+JWTAuthFilter
+       ↓
+Extract Authorization header
+       ↓
+Extract JWT token
+       ↓
+Extract username
+       ↓
+Load user from DB
+       ↓
+Create Authentication object
+       ↓
+Store inside SecurityContext
+       ↓
+Spring Security now trusts user
+       ↓
+Controller access granted
+ */

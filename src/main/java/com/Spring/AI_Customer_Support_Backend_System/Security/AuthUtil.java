@@ -91,24 +91,24 @@ public class AuthUtil {
         return providerId;
     }
 
-    public String findUserNameFromoAuthUser(OAuth2User oAuth2User, String registrationId, String providerId) {
-        String username = oAuth2User.getAttribute("email");
-        //If the email is available inside the oAuth2User then we return it
-        if(username!=null && !username.isBlank())    {
-            return username;
-        }
-
-        //If the registration Id is of google --- the username is stored in sub attribute
-        //If the registration Id is of github --- the username is stored in login attribute
-        //Else we set providerId as the username
-        switch(registrationId.toLowerCase())    {
-            case "google" :
-                username = oAuth2User.getAttribute("sub");
-                break;
-            default :
-                username = providerId;
-        }
-
-        return username;
-    }
+//    public String findUserNameFromoAuthUser(OAuth2User oAuth2User, String registrationId, String providerId) {
+//        String username = oAuth2User.getAttribute("email");
+//        //If the email is available inside the oAuth2User then we return it
+//        if(username!=null && !username.isBlank())    {
+//            return username;
+//        }
+//
+//        //If the registration Id is of google --- the username is stored in sub attribute
+//        //If the registration Id is of github --- the username is stored in login attribute
+//        //Else we set providerId as the username
+//        switch(registrationId.toLowerCase())    {
+//            case "google" :
+//                username = oAuth2User.getAttribute("sub");
+//                break;
+//            default :
+//                username = providerId;
+//        }
+//
+//        return username;
+//    }
 }

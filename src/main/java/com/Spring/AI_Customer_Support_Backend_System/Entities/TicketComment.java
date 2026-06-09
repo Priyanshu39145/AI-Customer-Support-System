@@ -59,3 +59,4 @@ public class TicketComment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 }
+//A Ticket Comment is used to put comments on an existing ticket whether by the user or the Agent ---

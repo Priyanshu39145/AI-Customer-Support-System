@@ -27,3 +27,4 @@ public class AppConfig {
     }
 
 }
+//Here we define the beans of PasswordEncoder, modelMapper and authenticationManager

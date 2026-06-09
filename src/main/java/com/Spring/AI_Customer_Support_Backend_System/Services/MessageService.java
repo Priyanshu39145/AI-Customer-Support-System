@@ -85,7 +85,7 @@ public class MessageService {
             throw new IllegalArgumentException("Unauthorized access");
         }
 
-
+        //We return all the messages in the order of ascending time ---
         List<Message> messages = messageRepository
                 .findByConversationIdOrderByCreatedAtAsc(conversationId);
 

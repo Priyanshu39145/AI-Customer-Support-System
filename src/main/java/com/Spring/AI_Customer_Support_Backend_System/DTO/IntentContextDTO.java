@@ -28,3 +28,7 @@ public class IntentContextDTO {
     private String messageHistory;
     private String currentMessage;
 }
+
+//We create a context about the user and the status of the conversation so that we can efficiently analyse the intent of the user from the chat
+//Whether the user wants a ticket created or follow up about a ticket or normal answer from the companyPolicy ----
+//See the fields ----

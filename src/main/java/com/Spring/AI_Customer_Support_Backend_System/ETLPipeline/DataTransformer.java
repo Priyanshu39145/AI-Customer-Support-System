@@ -14,7 +14,7 @@ public class DataTransformer {
         //We use TokenTextSplitter here --- it splits the document into multiple documents of the given token size ---
         //It has various default parameters like ---
         // DEFAULT_CHUNK_SIZE, MIN_CHUNK_SIZE_CHARS , MIN_CHUNK_LENGTH_TO_EMBED(Discard chunks shorter than this), MAX_NUM_CHUNKS ,
-        // KEEP_SEPARATOR(boolean --- if true and spearates of separator
+        // KEEP_SEPARATOR(boolean --- if true and separates of separator
         //We can initialize these parameters from the constructor --- If default constructor --- then default values given ---
         var splitter = new TokenTextSplitter(
                 300,   // chunk size (tokens)
@@ -29,3 +29,4 @@ public class DataTransformer {
     }
     //Now we can add these documents inside the vector database ---
 }
+//Done

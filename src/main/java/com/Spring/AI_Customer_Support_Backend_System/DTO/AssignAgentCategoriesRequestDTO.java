@@ -16,3 +16,4 @@ public class AssignAgentCategoriesRequestDTO {
     @NotEmpty(message = "At least one category is required")
     private Set<CategoryType> categories;
 }
+//We send the categories defined by the admin ---

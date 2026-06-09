@@ -27,4 +27,5 @@ public class MessageController {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.status(HttpStatus.OK).body(messageService.getMessages(conversationId,user));
     }
+    //It shows all the messages --- of the User and the AI inside the chat interface --- of an existing conversation ----
 }

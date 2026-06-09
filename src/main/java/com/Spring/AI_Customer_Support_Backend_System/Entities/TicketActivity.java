@@ -62,3 +62,11 @@ public class TicketActivity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 }
+//TicketActivity has the ticket, actionType (CREATED,
+//    STATUS_CHANGED,
+//    PRIORITY_CHANGED,
+//    CATEGORY_CHANGED,
+//    ASSIGNED,
+//    COMMENT_ADDED)
+//performedBy ---- the USer or the Admin ----
+//If any change is there ---- then we write the old value and the new value ----

@@ -28,7 +28,8 @@ public class TicketCommentService {
     private final TicketRepository ticketRepository;
     private final TicketCommentRepository ticketCommentRepository;
     private final TicketActivityService ticketActivityService;
-
+    //Cached method ----
+    //We find all the ticket comments for a particular ticket ---- with a particular user ---- Agent or User
     @Cacheable(
             value = "ticketComments",
             key = "#ticketId + '-' + (#user != null ? #user.id : 'anonymous')",
@@ -37,10 +38,10 @@ public class TicketCommentService {
     @Transactional(readOnly = true)
     public List<TicketCommentResponseDTO> getCommentsForTicket(String ticketId, User user) {
         log.info("Fetching comments for ticketId: {} by userId: {}", ticketId, user != null ? user.getId() : null);
-
+        //We get the ticket --- validate the user
         Ticket ticket = getTicketOrThrow(ticketId);
         validateTicketParticipant(ticket, user);
-
+        //Then we find the ticket comment with its author info --- in ascending order of createdAt
         return ticketCommentRepository.findByTicketIdWithAuthorOrderByCreatedAtAsc(ticketId)
                 .stream()
                 .map(this::mapToResponse)
@@ -57,7 +58,7 @@ public class TicketCommentService {
     @Transactional
     public TicketCommentResponseDTO addComment(String ticketId, User user, TicketCommentRequestDTO requestDTO) {
         log.info("Adding comment for ticketId: {} by userId: {}", ticketId, user != null ? user.getId() : null);
-
+        //We get the ticket --- and its participant validated ----
         Ticket ticket = getTicketOrThrow(ticketId);
         validateTicketParticipant(ticket, user);
 
@@ -68,6 +69,7 @@ public class TicketCommentService {
                 .authorRole(user.getRole())
                 .build();
 
+        //We create the entity --- and save it --- and map the response and send it
         TicketComment savedComment = ticketCommentRepository.save(comment);
         ticketActivityService.logActivity(
                 ticket,

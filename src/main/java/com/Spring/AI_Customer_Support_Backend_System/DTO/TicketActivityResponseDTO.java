@@ -20,3 +20,4 @@ public class TicketActivityResponseDTO implements Serializable {
     private String newValue;
     private LocalDateTime timestamp;
 }
+//Used for showing the TicketHistory

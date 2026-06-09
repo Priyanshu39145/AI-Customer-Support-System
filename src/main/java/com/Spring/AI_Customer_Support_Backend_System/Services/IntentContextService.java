@@ -20,7 +20,8 @@ public class IntentContextService {
 
     private final TicketRepository ticketRepository;
     private final ConversationRepository conversationRepository;
-
+    //Here we build the intent context so that we can analyse the intent of the user effectively ---
+    //What should be the context --- see the IntentContextDTO for it ---
     public IntentContextDTO buildContext(
             String currentMessage,
             User user,
@@ -45,7 +46,7 @@ public class IntentContextService {
         // Count messages in this conversation (session)
         int messageCount = conversationRepository.countMessagesInConversation(conversation.getId());
         boolean isFirstMessage = messageCount <= 1; // 1 because user message is already saved
-
+        //Building the intent context ----
         return IntentContextDTO.builder()
                 .userId(user.getId())
                 .ticketsCreatedToday(ticketsToday)

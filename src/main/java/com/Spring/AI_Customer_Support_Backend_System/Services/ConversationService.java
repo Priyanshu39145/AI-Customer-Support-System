@@ -32,42 +32,33 @@ public class ConversationService {
     private final TicketRepository ticketRepository;
     private final ChatClient ollamaChatClient;
 
-//    public Conversation getOrCreateConversation(String userId, String chatId)   {
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//        Conversation conversation = conversationRepository.findByUserAndChatIdOrderByTimestampAsc(userId,chatId);
-//
-//        if(conversation!=null)
-//            return conversation;
-//
-//        Conversation conversation1 = Conversation.builder()
-//                .user(user)
-//                .build();
-//
-//        conversationRepository.save(conversation1);
-//
-//        return conversation1;
-//    }
 
     @Cacheable(value = "conversations", key = "#user.id")
     public List<ConversationDTO> getConversations(User user)   {
+        //We find the conversations from the database by latest time first and not deleted conversations ----
+        //Then we convert the entities into DTOS ----
         List<Conversation> conversations = conversationRepository.findByUserAndDeletedFalseOrderByTimestampDesc(user);
 
         return mapToConversationDTOs(conversations);
     }
 
+    @Cacheable(
+            value = "conversationSearch",
+            key = "#user.id + ':' + #keyword"
+    )
     public List<ConversationDTO> searchConversations(User user, String keyword) {
+        //If user is null then we throw error that Auth required
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
         }
-
+        //If there is no keyword --- we ask for keyword ---
         if(keyword == null || keyword.trim().isBlank()) {
             throw new IllegalArgumentException("Keyword is required");
         }
 
         String normalizedKeyword = keyword.trim();
         log.info("Searching conversations | userId: {}, keywordLength: {}", user.getId(), normalizedKeyword.length());
+        //We search using Query Method inside JPA Repository ---- see there ---
         return mapToConversationDTOs(conversationRepository.searchUserConversations(user, normalizedKeyword));
     }
 
@@ -119,13 +110,14 @@ public class ConversationService {
         return conversation;
     }
 
+    //We just delete the conversation here ---
     @Transactional
     @CacheEvict(value = "conversations", key = "#user.id")
     public void deleteConversation(User user, String conversationId, boolean permanent) {
         Conversation conversation = getOwnedConversation(user, conversationId);
         log.info("Deleting conversation | conversationId: {}, userId: {}, permanent: {}",
                 conversationId, user.getId(), permanent);
-
+        //If permanent flag true --- then delete from DB --- otherwise just set delete flag true ---
         if(permanent) {
             Ticket ticket = conversation.getTicket();
             if(ticket != null) {
@@ -145,7 +137,9 @@ public class ConversationService {
     @Transactional
     @CacheEvict(value = "conversations", key = "#user.id")
     public ConversationDTO renameConversation(User user, String conversationId, ConversationTitleRequestDTO requestDTO) {
+        //We get the conversation of a particular user ---- using the id ---
         Conversation conversation = getOwnedConversation(user, conversationId);
+        //We get the title from the new given title ---
         String title = requestDTO.getTitle().trim();
         log.info("Renaming conversation | conversationId: {}, userId: {}", conversationId, user.getId());
 
@@ -159,16 +153,20 @@ public class ConversationService {
     public ConversationDTO closeConversation(User user, String conversationId) {
         Conversation conversation = getOwnedConversation(user, conversationId);
         log.info("Closing conversation | conversationId: {}, userId: {}", conversationId, user.getId());
-
+        //If the conversation is already closed --- we cant close it again ---
         if(conversation.getStatus() == ConversationStatusType.CLOSED) {
             throw new IllegalArgumentException("Conversation is already closed");
         }
 
+        //We set the CLOSED status and save ---
         conversation.setStatus(ConversationStatusType.CLOSED);
         conversationRepository.save(conversation);
         return new ConversationDTO(conversation.getId(), conversation.getTitle());
     }
 
+    //Using this method --- we find the the correct conversation of a user using the id ---
+    //We first check for Auth --- then fetch the conversation --- then check if the conversation is deleted or not --
+    //Then we check if the conversation fetched has the same user as the given user ---- then we send the conversation ---
     private Conversation getOwnedConversation(User user, String conversationId) {
         if (user == null) {
             throw new AccessDeniedException("Authentication required");

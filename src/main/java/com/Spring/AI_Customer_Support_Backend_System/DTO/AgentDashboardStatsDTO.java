@@ -12,3 +12,4 @@ public class AgentDashboardStatsDTO {
     private long inProgressTickets;
     private long resolvedTickets;
 }
+//Done

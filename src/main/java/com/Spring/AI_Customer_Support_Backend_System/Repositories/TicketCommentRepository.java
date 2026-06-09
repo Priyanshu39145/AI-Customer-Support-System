@@ -17,3 +17,4 @@ public interface TicketCommentRepository extends JpaRepository<TicketComment, St
             """)
     List<TicketComment> findByTicketIdWithAuthorOrderByCreatedAtAsc(@Param("ticketId") String ticketId);
 }
+//Done

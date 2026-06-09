@@ -17,3 +17,4 @@ public class AIResponse {
     private String conversationId;
     private LocalDateTime timestamp = LocalDateTime.now();
 }
+//Done

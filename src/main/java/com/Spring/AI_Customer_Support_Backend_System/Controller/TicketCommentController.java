@@ -23,7 +23,7 @@ import java.util.List;
 public class TicketCommentController {
 
     private final TicketCommentService ticketCommentService;
-
+    //Here we get all the comments for a ticket --- accessible for both user and agent of a particular ticket
     @GetMapping("/tickets/{ticketId}/comments")
     @PreAuthorize("hasAnyRole('USER', 'AGENT')")
     public ResponseEntity<List<TicketCommentResponseDTO>> getCommentsForTicket(@PathVariable String ticketId) {
@@ -31,6 +31,7 @@ public class TicketCommentController {
         return ResponseEntity.ok(ticketCommentService.getCommentsForTicket(ticketId, user));
     }
 
+    //Here we post a comment over a ticket --- accessible for both user and agent ----
     @PostMapping("/tickets/{ticketId}/comments")
     @PreAuthorize("hasAnyRole('USER', 'AGENT')")
     public ResponseEntity<TicketCommentResponseDTO> addComment(@PathVariable String ticketId,

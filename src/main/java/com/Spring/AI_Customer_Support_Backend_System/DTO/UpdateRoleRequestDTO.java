@@ -8,3 +8,4 @@ public class UpdateRoleRequestDTO {
 
     private RoleType role;
 }
+//Done

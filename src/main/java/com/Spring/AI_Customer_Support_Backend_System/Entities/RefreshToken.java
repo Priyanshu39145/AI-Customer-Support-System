@@ -43,3 +43,10 @@ public class RefreshToken {
     @Version
     private Long version;
 }
+//This is the entity which stores the refresh tokens inside the database ----
+//The Refresh tokens are generated whenever a new login session has started --- whenever the JWT expires ----
+// the refresh method automatically invokes --- and using the refresh token ---- anoher new JWT token is generated ---
+//We have the id, token ---- the user object --- expiry time ---
+//If we logout then we set the revoke as true --- which destroys the refresh token ---
+//At the end we store version ---- to prevent race condition for concurrent refresh requests ----
+

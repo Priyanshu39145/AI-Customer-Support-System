@@ -26,7 +26,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class User implements UserDetails {
+public class User implements UserDetails { //implementing UserDetails tells Spring Security that this entity can be used for authentication
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -39,9 +39,10 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private RoleType role;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.EAGER) //This creates another table immediatly --- where each user is given a category ----
     @CollectionTable(name = "user_expertise", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
@@ -54,7 +55,10 @@ public class User implements UserDetails {
     private String providerId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ProviderType providerType;
+
+    //@JsonIgnore is used to avoid huge responses ----
 
     @JsonIgnore
     @OneToMany(mappedBy = "createdBy")
@@ -89,3 +93,13 @@ public class User implements UserDetails {
         return getEmail();
     }
 }
+
+
+//Here is the main User entity ---- it first has the id,name,email and role(ADMIN, USER or AGENT) ----
+//Then comes expertise ---- which defines the Category of Agent for efficient ticket classification ----
+//Then comes enabled --- to provide soft delete 0000
+//Then comes providerId ---- for oAuth2 login ----
+//providerType ---- either GOOGLE or EMAIL ----
+//Then we have the created tickets of the User --- and the assignedTickets for Agent ----
+// Relationship is User -> Many Tickets --- (Ticket is owner of the relationship)
+

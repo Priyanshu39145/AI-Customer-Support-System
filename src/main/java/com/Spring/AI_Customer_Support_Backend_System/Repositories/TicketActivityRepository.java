@@ -17,3 +17,4 @@ public interface TicketActivityRepository extends JpaRepository<TicketActivity, 
             """)
     List<TicketActivity> findByTicketIdWithPerformedByOrderByCreatedAtAsc(@Param("ticketId") String ticketId);
 }
+//We return the ticketactivity with the performedBy information in a separate column ---- and arranged in Ascending order of time

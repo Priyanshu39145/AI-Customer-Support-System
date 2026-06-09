@@ -15,3 +15,5 @@ public class ConversationDTO implements Serializable {
     private String conversationId;
     private String conversationTitle;
 }
+
+//Done --- We use it to return conversation id and title ----

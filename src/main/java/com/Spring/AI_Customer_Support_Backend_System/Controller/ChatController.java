@@ -17,6 +17,8 @@ public class ChatController {
 
     private final ChatService chatService;
 
+    //This is the main Chat functionality of the AI ----
+    //We give the raw message to the AI ----- and also conversationId if we are in an existing conversation ---
     @PostMapping({"/chat", "/chat/{conversationId}"})
     public ResponseEntity<AIResponse> chat(@RequestBody String message, @PathVariable(required = false) String conversationId) {
         User user = (User) SecurityContextHolder

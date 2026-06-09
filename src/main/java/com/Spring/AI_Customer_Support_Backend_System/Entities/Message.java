@@ -26,9 +26,6 @@ public class Message {
     @JoinColumn(name = "conversation_id", nullable = false)
     private Conversation conversation;
 
-    @ManyToOne
-    @JoinColumn(name = "ticket_id" , nullable = true)
-    private Ticket ticket;
 
     @Enumerated(EnumType.STRING)
     private SenderType sender;
@@ -40,3 +37,6 @@ public class Message {
     @CreationTimestamp
     private LocalDateTime createdAt;
 }
+//A MEssage inside an USER to AI chat has following info --- id, content, conversation with which it is associated ---
+// --- the senderType (USER or AI), the User entity inside the conversation
+//createdAt for the time ---

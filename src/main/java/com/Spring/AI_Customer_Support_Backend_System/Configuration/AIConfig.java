@@ -30,7 +30,7 @@ public class AIConfig {
                 .defaultOptions(
                         OllamaChatOptions.builder()
                                 .model("llama3.2:3b")
-                                .temperature(0.1)
+                                .temperature(0.1) //temperature indicates the variety of responses ---- lesser temperature more robust the response
                                 .build()
                 )
                 .build();
@@ -60,3 +60,4 @@ public class AIConfig {
     }
 
 }
+//Done

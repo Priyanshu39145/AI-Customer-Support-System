@@ -71,3 +71,5 @@ public class EmailServices {
 //        return null;
     }
 }
+
+//This Service is used to send an email ---- whenever the ticket is closed ----

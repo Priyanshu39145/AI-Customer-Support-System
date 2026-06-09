@@ -38,7 +38,7 @@ public class Conversation {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL , fetch = FetchType.LAZY , orphanRemoval = true)
     private List<Message> messages;
 
     @OneToOne(mappedBy = "conversation")
@@ -50,3 +50,8 @@ public class Conversation {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }
+//This Conversation entity consists of the id, title of the conversation --- ConversationStatus --- which is by default ACTIVE
+//Then deleted flag for deleting conversations ----
+//The user of the conversation ---
+//And the messages of the conversation --- we fetch it LAZY ---
+//The ticket made through the conversation (only one can be made) ---

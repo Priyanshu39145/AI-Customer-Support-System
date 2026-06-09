@@ -21,3 +21,5 @@ public class TicketCommentResponseDTO implements Serializable {
     private RoleType authorRole;
     private LocalDateTime createdAt;
 }
+
+//Done ---

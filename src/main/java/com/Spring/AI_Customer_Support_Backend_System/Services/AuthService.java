@@ -53,7 +53,7 @@ public class AuthService {
         //We first check for the existence of the user in the database --- if it is present then we give an exception ---
         log.info("Register attempt for email: {}", registerRequestDTO.getEmail());
         User user = userRepository.findByEmail(registerRequestDTO.getEmail()).orElse(null);
-
+        //If user doesnt exist then we throw exception ---
         if(user!=null)  {
             log.warn("Registration failed - user already exists: {}", registerRequestDTO.getEmail());
             throw new IllegalArgumentException("User already exists");
@@ -79,6 +79,18 @@ public class AuthService {
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
         log.info("Login attempt for email: {}", loginRequestDTO.getEmail());
         //We first authenticate using the authentication manager which internally uses the UsernamePasswordAuthenticationToken containing the username and password for the user ----
+        /*
+        Internally what Spring does??? ---
+        AuthenticationManager
+        ↓
+        DaoAuthenticationProvider
+        ↓
+        CustomUserDetailsService.loadUserByUsername()
+        ↓
+        UserRepository.findByEmail()
+        ↓
+        Password comparison using PasswordEncoder
+         */
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequestDTO.getEmail() , loginRequestDTO.getPassword())
         );
@@ -92,9 +104,11 @@ public class AuthService {
 
         //We create the JWT token using the user object here ----
         String token = authUtil.generateAccessToken(user);
+        //Here we create the refresh token --- which generates new access tokens and avoids forced re logins ----
+        //See the method ---- createRefreshToken ----
         String refreshToken = createRefreshToken(user);
         log.info("Login successful for user: {}", user.getEmail());
-        //We return the response including the JWT token ---
+        //We return the response including the JWT token and the refresh token for a login session ----
         LoginResponseDTO.UserDTO userDTO = LoginResponseDTO.UserDTO.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -109,19 +123,41 @@ public class AuthService {
         return responseDTO;
     }
 
+    /*
+    What this method actually does ----
+    Old Refresh Token
+        ↓
+    Validate Token
+            ↓
+    Check Expiry
+            ↓
+    Check Revocation
+            ↓
+    Generate NEW Access Token
+            ↓
+    Generate NEW Refresh Token
+            ↓
+    Revoke OLD Refresh Token
+            ↓
+    Return New Tokens
+     */
     @Transactional
     public LoginResponseDTO refresh(RefreshTokenRequestDTO requestDTO) {
+        //So we get the refresh request from the frontend periodically whenever the JWT is expired ----
+        //The refresh request contains the RefreshTokenRequestDTO --- which contains just the refresh token ---
+        //First of all we find the entity inside the database ----
         RefreshToken existingToken = refreshTokenRepository.findByToken(hashToken(requestDTO.getRefreshToken()))
                 .orElseThrow(() -> {
                     log.warn("Refresh failed - token not found");
                     return new BadCredentialsException("Invalid refresh token");
                 });
-
+        //IF the existing token is revoked ----- then the user has logged out ----
         if(existingToken.isRevoked()) {
             log.warn("Refresh failed - token revoked | tokenId: {}", existingToken.getId());
             throw new BadCredentialsException("Invalid refresh token");
         }
 
+        //We then check if the refresh token is not expired or not ---- if it is expired ---- then we revoke it ---
         if(existingToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             existingToken.setRevoked(true);
             existingToken.setRevokedAt(LocalDateTime.now());
@@ -130,15 +166,18 @@ public class AuthService {
             throw new BadCredentialsException("Refresh token expired");
         }
 
+        //Now after validation we find the user of the refresh token ---
         User user = existingToken.getUser();
         if(user == null || !user.isEnabled()) {
             throw new BadCredentialsException("Invalid refresh token");
         }
-
+        //Now to re-enter session we revoke the old refresh token ----
+        //Then we create the new JWT token and new refresh token again ----
         existingToken.setRevoked(true);
         existingToken.setRevokedAt(LocalDateTime.now());
         refreshTokenRepository.save(existingToken);
-
+        //Here we create new JWT token and new refresh token ----
+        //Then return the response of new session ----
         String accessToken = authUtil.generateAccessToken(user);
         String refreshTokenVal = createRefreshToken(user);
         LoginResponseDTO.UserDTO userDTO = LoginResponseDTO.UserDTO.builder()
@@ -157,7 +196,7 @@ public class AuthService {
         return responseDTO;
     }
 
-    @Transactional
+    @Transactional //For logout we only set revoked as true due to which the current login session dismantle ----
     public void logout(LogoutRequestDTO requestDTO) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(hashToken(requestDTO.getRefreshToken()))
                 .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
@@ -280,21 +319,29 @@ public class AuthService {
 
     }
 
+    //It creates a new refresh token for new login procedure ----
     private String createRefreshToken(User user) {
+        //First of all we generate some randomBytes -----
         byte[] randomBytes = new byte[64];
+        //We now cryptographically secure the randomness
         SECURE_RANDOM.nextBytes(randomBytes);
+        //We convert the randomBytes into URL safe string --- or token string --- or create the refresh token ---
+        //For each login sesssion we create a new random refresh token ----
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
-
+        //Now we store the refresh token along with the user ---- give the expiration time ---- as 7 days ----
+        //See the entity for more details ----
+        //Main thing --- we hash the token before storage using the hashToken method ----
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(hashToken(token))
                 .user(user)
                 .expiresAt(LocalDateTime.now().plusDays(refreshTokenExpirationDays))
+                //Revoked is false ---now --- revoked will be true when we wanna logout ---
                 .revoked(false)
                 .build();
         refreshTokenRepository.save(refreshToken);
         return token;
     }
-
+    //It converts the token into hash --- using SHA 256 algo ----
     private String hashToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

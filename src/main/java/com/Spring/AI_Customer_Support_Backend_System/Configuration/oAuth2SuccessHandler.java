@@ -50,3 +50,4 @@ public class oAuth2SuccessHandler implements AuthenticationSuccessHandler {
         response.sendRedirect(redirectUrl.toString());
     }
 }
+//Done

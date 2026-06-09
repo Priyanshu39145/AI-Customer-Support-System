@@ -15,6 +15,7 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
 
+    //This endpoint returns the dashboard stats rolewise -----
     @GetMapping("/dashboard/stats")
     public ResponseEntity<DashboardStatsDTO> getStats() {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();

@@ -30,8 +30,15 @@ public interface ConversationRepository extends JpaRepository<Conversation, Stri
               )
             ORDER BY c.timestamp DESC
             """)
+    /*
+    searches all non-deleted conversations of a particular user where either:
+    - the conversation title contains the keyword
+    OR
+    - any message inside the conversation contains the keyword
+     */
     List<Conversation> searchUserConversations(@Param("user") User user,
                                                @Param("keyword") String keyword);
+
 
     @Query("SELECT COUNT(m) FROM Message m WHERE m.conversation.id = :conversationId")
     int countMessagesInConversation(@Param("conversationId") String conversationId);

@@ -30,6 +30,8 @@ public class DashboardService {
                 user.getRole()
         );
 
+        //Then we fetch total tickets, total open tickets, total in progress tickets, total closed tickets
+        //From the frontend ---- other things are calculated and put on ----
         if(user.getRole() == RoleType.ADMIN) {
 
             return DashboardStatsDTO.builder()

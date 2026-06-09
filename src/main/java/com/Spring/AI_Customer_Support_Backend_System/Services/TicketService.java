@@ -82,7 +82,9 @@ public class TicketService {
         if(conversation != null) {
             conversation.setTicket(ticket);
         }
+        //We log in ticketActivity ----
         ticketActivityService.logActivity(ticket, user, ActionType.CREATED, null, ticket.getId());
+        //If agent is also assigned then we also log that in ticketActivity ----
         if(agent != null) {
             ticketActivityService.logActivity(ticket, user, ActionType.ASSIGNED, null, formatUserActivityValue(agent));
         }
@@ -90,7 +92,8 @@ public class TicketService {
         return modelMapper.map(ticket , CreateTicketResponseDTO.class);
     }
 
-//
+
+    //Similarly Cache Evict for updating the Cache
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "tickets", allEntries = true),
@@ -99,6 +102,7 @@ public class TicketService {
             @CacheEvict(value = "ticketHistory", key = "#ticketId")
     })
     public TicketResponseDTO assignTicket(User user, String ticketId, String agentId) {
+        //Validating the given things ---
         log.info("Assigning ticket {} to agent {}", ticketId, agentId);
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
@@ -113,12 +117,12 @@ public class TicketService {
                     log.error("Agent not found: {}", agentId);
                     return new IllegalArgumentException("Agent Not Found");
                 });
-
+        //If the selected user by the admin --- is not an agent we return an exception ----
         if(agent.getRole()!= RoleType.AGENT) {
             log.warn("User {} is not an agent", agentId);
             throw new IllegalArgumentException("User is not an Agent");
         }
-
+        //We log in the ticketActivityService and return the DTO ----
         User previousAgent = ticket.getAssignedTo();
         ticket.setAssignedTo(agent);
         ticketRepository.save(ticket);
@@ -142,15 +146,9 @@ public class TicketService {
         return dto;
     }
 
-//
-//    @Transactional
-//    @Caching(evict = {
-//            @CacheEvict(value = "tickets", key = "#ticketId + '-' + #status"),
-//            @CacheEvict(value = "ticketsList", allEntries = true),
-//            @CacheEvict(value = "ticketsListOfUser", allEntries = true),
-//            @CacheEvict(value = "ticketsListOfAgent", allEntries = true),
-//            @CacheEvict(value = "searchticketsList", allEntries = true)
-//    })
+
+    //This is the changeStatus service implementation ---
+    //First of all we are doing cacheEvict so that the ticket details get updated inside th cache too ----
     @Caching(evict = {
             @CacheEvict(value = "searchticketsList", allEntries = true),
             @CacheEvict(value = "tickets", allEntries = true),
@@ -159,7 +157,7 @@ public class TicketService {
     @Transactional
     public TicketResponseDTO changeStatus(User user, String ticketId, StatusType status) {
         log.info("Changing status of ticket {} to {}", ticketId, status);
-
+        //We validate the given details ----
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
         }
@@ -173,14 +171,14 @@ public class TicketService {
                     log.error("Ticket not found: {}", ticketId);
                     return new IllegalArgumentException("Ticket Not found");
                 });
-
+        //If the ticker has no assigned agent or the assigned agent doesnt match to the current agent USer --- then we throw error
         if(ticket.getAssignedTo() == null || !ticket.getAssignedTo().getId().equals(user.getId())) {
             log.warn("Ticket {} has no assigned agent", ticketId);
             throw new AccessDeniedException("Ticket is not assigned to this agent");
         }
 
         StatusType currentStatus = ticket.getStatus();
-
+        //We can only go from Open to In Progress and from In Progress to Closed ----
         if(currentStatus == StatusType.OPEN && status != StatusType.IN_PROGRESS) {
             throw new IllegalArgumentException("Invalid status transition");
         }
@@ -188,11 +186,12 @@ public class TicketService {
         if(currentStatus == StatusType.IN_PROGRESS && status != StatusType.CLOSED) {
             throw new IllegalArgumentException("Invalid status transition");
         }
-
+        //If the ticket is already closed then we cant change its status
         if(currentStatus == StatusType.CLOSED) {
             throw new IllegalArgumentException("Ticket is already resolved");
         }
-
+        //We set the status ---- and set the updated time ----
+        //And also we log the activity inside the ticketActivityService ----
         ticket.setStatus(status);
         ticket.setUpdatedAt(LocalDateTime.now());
         ticketRepository.save(ticket);
@@ -206,11 +205,11 @@ public class TicketService {
 
         log.info("Ticket {} status updated successfully", ticketId);
 
-
+        //Now if the ticket is closed we send an email to the user of the ticker notifying that the ticket is closed ----
         if(ticket.getStatus()==StatusType.CLOSED)
             emailServices.sendEmail(ticket);
 
-
+        //We create the DTO and then return it ----
         TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
         dto.setCreatedById(
                 ticket.getCreatedBy() != null ? ticket.getCreatedBy().getId() : null
@@ -221,7 +220,7 @@ public class TicketService {
         return dto;
 
     }
-
+    //Similarly we here --- use Cache Evict so that the tickets inside the cache also get changed accordingly ---
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "searchticketsList", allEntries = true),
@@ -230,7 +229,7 @@ public class TicketService {
     })
     public TicketResponseDTO changePriority(User user, String ticketId, PriorityType priority) {
         log.info("Changing priority of ticket {} to {}", ticketId, priority);
-
+        //We validate the details given ----
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
         }
@@ -244,9 +243,13 @@ public class TicketService {
                     log.error("Ticket not found: {}", ticketId);
                     return new IllegalArgumentException("Ticket Not found");
                 });
-
+        //This is a private method created that checks whether the user has the role to change the particular ticket
         validateAgentOrAdminCanMutateTicket(user, ticket);
 
+        //After all validations ----
+        //We first change the priority ---
+        //Then set the updated Time ---
+        //Then we update the ticketActivityStatus ---- logging that the priority was being changed ----
         PriorityType oldPriority = ticket.getPriority();
         ticket.setPriority(priority);
         ticket.setUpdatedAt(LocalDateTime.now());
@@ -258,7 +261,7 @@ public class TicketService {
                 oldPriority != null ? oldPriority.name() : null,
                 priority.name()
         );
-
+        //Then we jsut create the DTO and send it ----
         log.info("Ticket {} priority updated successfully", ticketId);
 
         TicketResponseDTO dto = modelMapper.map(ticket, TicketResponseDTO.class);
@@ -271,6 +274,7 @@ public class TicketService {
         return dto;
     }
 
+    //Similarly we here --- use Cache Evict so that the tickets inside the cache also get changed accordingly ---
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "searchticketsList", allEntries = true),
@@ -279,7 +283,7 @@ public class TicketService {
     })
     public TicketResponseDTO changeCategory(User user, String ticketId, CategoryType category) {
         log.info("Changing category of ticket {} to {}", ticketId, category);
-
+        //Validating user, category, ticket and the role
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
         }
@@ -295,19 +299,23 @@ public class TicketService {
                 });
 
         validateAgentOrAdminCanMutateTicket(user, ticket);
-
+        //We change the category ---
         CategoryType oldCategory = ticket.getCategory();
         User previousAgent = ticket.getAssignedTo();
         ticket.setCategory(category);
-
+        //And if the ticket is still open --- we again change the agent as the agent is decided on the basis of category ---
         if(ticket.getStatus()==StatusType.OPEN) {
+            //See the method --- there we find the least loaded agent by category ----
             User newAgent = findLeastLoadedAgentByCategory(category);
-
-            if (previousAgent == null || !newAgent.getId().equals(previousAgent.getId())) {
+            //If the previous agent was null or the new agent is not equal to the previous agent  ---- then we need to assign the agent
+            if (!Objects.equals(
+                    previousAgent != null ? previousAgent.getId() : null,
+                    newAgent != null ? newAgent.getId() : null
+            )) {
                 ticket.setAssignedTo(newAgent);
             }
         }
-
+        //We make the changes and then again change the ticketActivityService ----
         ticket.setUpdatedAt(LocalDateTime.now());
         ticketRepository.save(ticket);
         ticketActivityService.logActivity(
@@ -317,7 +325,8 @@ public class TicketService {
                 oldCategory != null ? oldCategory.name() : null,
                 category.name()
         );
-
+        //If the new and previous agent are not equal then we also need to log it into the ticketActivityService that the agent is new assigned
+        //formatUserActivityValue ---- returns agentId-agentName
         User currentAgent = ticket.getAssignedTo();
         if (!Objects.equals(
                 previousAgent != null ? previousAgent.getId() : null,
@@ -335,7 +344,10 @@ public class TicketService {
         log.info("Ticket {} category updated successfully", ticketId);
         return mapToTicketResponseDTO(ticket);
     }
-//
+
+    //Cached method ---
+    //We just validate everything ---
+    //And send the ResponseDT) for that particular ticket ----
     @Cacheable(value = "tickets", key = "#ticketId + '-' + #user.id")
     public TicketDetailedResponseDTO getTicketById(String ticketId, User user) {
 
@@ -391,6 +403,7 @@ public class TicketService {
         );
     }
 
+    //Here we fetch the ticketHistory fro a particular ticket --- and show in the detailed response of the ticket ---
     public List<TicketActivityResponseDTO> getTicketHistory(String ticketId, User user) {
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
@@ -472,6 +485,8 @@ public class TicketService {
         return tickets.map(this::mapToTicketResponseDTO);
     }
 
+    //It is a cached method ----
+    //We just validate the access and send the paginated output ----
     @Cacheable(
             value = "searchticketsList",
             key = "'ADMIN-ALL-' + (#keyword ?: 'ALL') + '-' + (#status ?: 'ALL') + '-' + (#priority ?: 'ALL') + '-' + (#category ?: 'ALL') + '-' + (#assignedToId ?: 'ALL') + '-' + (#createdFrom ?: 'NA') + '-' + (#createdTo ?: 'NA') + '-' + #page + '-' + #size",
@@ -512,12 +527,15 @@ public class TicketService {
         ).map(this::mapToTicketResponseDTO);
     }
 
-
+    //Here we find the agent with the least amount of tickets by category ----
     public User findLeastLoadedAgentByCategory(CategoryType category) {
+        //We make an arraylist of the statuses --- applicable for counting tickets
         List<StatusType> activeStatuses = List.of(StatusType.OPEN, StatusType.IN_PROGRESS);
+        //We set the Pageable instance so that we get the first agent only ---
         Pageable firstAgent = PageRequest.of(0, 1);
-
         if(category != null) {
+            //Now what do we find using our JPA Query method? ----
+            //We return the agent with the least amount of open or in progress tickets that
             List<User> matchingAgents = userRepository.findLeastLoadedAgentsByCategory(
                     RoleType.AGENT,
                     category,
@@ -529,7 +547,7 @@ public class TicketService {
                 log.info("Assigned ticket category {} to matching agent {}", category, matchingAgents.get(0).getId());
                 return matchingAgents.get(0);
             }
-
+            //If there are no matching agents --- then we find just the least Loaded Agent ---- and return it
             log.warn("No agent found with expertise {}. Falling back to least-loaded agent.", category);
         }
 
@@ -540,10 +558,9 @@ public class TicketService {
         ).stream().findFirst().orElse(null);
     }
 
-    public User findLeastLoadedAgent() {
-        return findLeastLoadedAgentByCategory(null);
-    }
 
+    //If it is Admin --- then it has privileges ---
+    //If it is Agent --- we check whether the ticket is assigned to it ----
     private void validateAgentOrAdminCanMutateTicket(User user, Ticket ticket) {
         if(user.getRole() == RoleType.ADMIN) {
             return;

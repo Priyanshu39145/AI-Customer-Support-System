@@ -12,3 +12,4 @@ public class MessageRequestDTO {
     @NotBlank(message = "Content should not be null")
     private String content;
 }
+//Done

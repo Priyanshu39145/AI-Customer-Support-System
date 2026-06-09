@@ -17,3 +17,4 @@ public class AgentResponseDTO {
     private Set<CategoryType> categories;
     private long activeTicketCount;
 }
+//Done

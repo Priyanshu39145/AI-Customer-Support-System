@@ -98,42 +98,42 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
                                   @Param("createdTo") LocalDateTime createdTo,
                                   Pageable pageable);
 
-    //Searching by keyword only --- we use Query method for it ---
-    @Query("""
-    SELECT t FROM Ticket t
-    WHERE
-        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
-    """)
-    Page<Ticket> searchTickets(String keyword, Pageable pageable);
-    //Searching by keyword and status
-    @Query("""
-    SELECT t FROM Ticket t
-    WHERE 
-        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
-    AND t.status = :status
-    """)
-    Page<Ticket> searchTicketsByStatus(String keyword, StatusType status, Pageable pageable);
-    //Searching by keyword and priority
-    @Query("""
-    SELECT t FROM Ticket t
-    WHERE 
-        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
-    AND t.priority = :priority
-    """)
-    Page<Ticket> searchTicketsByPriority(String keyword, PriorityType priority, Pageable pageable);
-
-    @Query("""
-    SELECT t FROM Ticket t
-    WHERE 
-        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
-            AND t.status = :status
-            AND t.priority = :priority
-    """)
-    Page<Ticket> searchTicketsByStatusAndPriority(String keyword, StatusType status, PriorityType priority, Pageable pageable);
+//    //Searching by keyword only --- we use Query method for it ---
+//    @Query("""
+//    SELECT t FROM Ticket t
+//    WHERE
+//        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
+//    """)
+//    Page<Ticket> searchTickets(String keyword, Pageable pageable);
+//    //Searching by keyword and status
+//    @Query("""
+//    SELECT t FROM Ticket t
+//    WHERE
+//        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
+//    AND t.status = :status
+//    """)
+//    Page<Ticket> searchTicketsByStatus(String keyword, StatusType status, Pageable pageable);
+//    //Searching by keyword and priority
+//    @Query("""
+//    SELECT t FROM Ticket t
+//    WHERE
+//        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
+//    AND t.priority = :priority
+//    """)
+//    Page<Ticket> searchTicketsByPriority(String keyword, PriorityType priority, Pageable pageable);
+//
+//    @Query("""
+//    SELECT t FROM Ticket t
+//    WHERE
+//        (LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
+//            AND t.status = :status
+//            AND t.priority = :priority
+//    """)
+//    Page<Ticket> searchTicketsByStatusAndPriority(String keyword, StatusType status, PriorityType priority, Pageable pageable);
 
 
 
