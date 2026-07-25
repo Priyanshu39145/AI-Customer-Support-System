@@ -224,8 +224,8 @@ public class TicketService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "searchticketsList", allEntries = true),
-            @CacheEvict(value = "tickets", allEntries = true),
-            @CacheEvict(value = "ticketHistory", key = "#ticketId")
+            @CacheEvict(value = "tickets", allEntries = true)
+
     })
     public TicketResponseDTO changePriority(User user, String ticketId, PriorityType priority) {
         log.info("Changing priority of ticket {} to {}", ticketId, priority);

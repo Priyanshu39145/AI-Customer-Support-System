@@ -25,10 +25,7 @@ public class TicketActivityService {
     //In this method --- using the log information --- we create the ticketActivity instance and store in DB ---
     //Whenever a ticket has any change or create we do this --- for showing the user the history of the ticket process ---
     //Cache Evict for updating the Cached OUtput ----
-    @CacheEvict(
-            value = "ticketHistory",
-            key = "#ticketId"
-    )
+    @CacheEvict(value = "ticketHistory", key = "#ticket.id")
     @Transactional
     public void logActivity(Ticket ticket, User user, ActionType actionType, String oldValue, String newValue) {
         if (ticket == null || user == null || actionType == null) {
