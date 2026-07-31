@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -6,8 +6,9 @@ import agentService from '@/services/agentService';
 import { PageLoader } from '@/components/UI/LoadingSpinner';
 import { EmptyState } from '@/components/UI/EmptyState';
 import { useToast } from '@/components/Toast/ToastProvider';
+import { CategoryType } from '@/services/ticketService';
 
-const CATEGORIES = [
+const CATEGORIES: CategoryType[] = [
   'GENERAL',
   'TECHNICAL',
   'BILLING',
@@ -22,7 +23,7 @@ export const AgentCategoriesPage = () => {
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<CategoryType[]>([]);
 
   const { data: agents, isLoading } = useQuery({
     queryKey: ['agents'],
@@ -31,8 +32,14 @@ export const AgentCategoriesPage = () => {
 
   const agent = agents?.find((a) => a.agentId === agentId);
 
+  useEffect(() => {
+    if (agent) {
+      setSelected(agent.categories);
+    }
+  }, [agent]);
+
   const mutation = useMutation({
-    mutationFn: (categories: string[]) => agentService.assignCategories(agentId!, categories),
+    mutationFn: (categories: CategoryType[]) => agentService.assignCategories(agentId!, categories),
     onSuccess: () => {
       showToast('success', 'Categories updated');
       navigate('/admin/agents');
@@ -48,7 +55,7 @@ export const AgentCategoriesPage = () => {
     return <EmptyState title="Agent not found" />;
   }
 
-  const toggleCategory = (category: string) => {
+  const toggleCategory = (category: CategoryType) => {
     setSelected((prev) =>
       prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
     );
@@ -82,10 +89,16 @@ export const AgentCategoriesPage = () => {
           ))}
         </div>
 
+        {selected.length === 0 && (
+          <p className="mt-4 text-sm text-red-500">
+            At least one category is required
+          </p>
+        )}
+
         <button
           onClick={() => mutation.mutate(selected)}
-          disabled={mutation.isPending}
-          className="btn-primary w-full mt-6 flex items-center justify-center gap-2"
+          disabled={selected.length === 0 || mutation.isPending}
+          className="btn-primary w-full mt-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-4 h-4" />
           {mutation.isPending ? 'Saving...' : 'Save Categories'}

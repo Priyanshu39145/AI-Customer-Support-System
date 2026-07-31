@@ -58,6 +58,8 @@ export const AgentTicketDetailPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticketHistory', ticketId] });
+
       showToast('success', 'Status updated');
     },
     onError: () => showToast('error', 'Failed to update status'),
@@ -68,7 +70,9 @@ export const AgentTicketDetailPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
-      showToast('success', 'Priority updated');
+      queryClient.invalidateQueries({ queryKey: ['ticketHistory', ticketId] });
+
+      showToast('success', 'Status updated');
     },
     onError: () => showToast('error', 'Failed to update priority'),
   });
@@ -184,17 +188,35 @@ export const AgentTicketDetailPage = () => {
             <div className="space-y-3">
               <div>
                 <label className="text-sm text-gray-500">Status</label>
-                <select
-                  value={ticket.status}
-                  onChange={(e) => statusMutation.mutate(e.target.value as StatusType)}
-                  disabled={statusMutation.isPending}
-                  className="input mt-1"
-                >
-                  <option value="OPEN">Open</option>
-                  <option value="IN_PROGRESS">In Progress</option>
 
-                  <option value="CLOSED">Closed</option>
-                </select>
+                {ticket.status === "OPEN" && (
+                  <button
+                    onClick={() => statusMutation.mutate("IN_PROGRESS")}
+                    disabled={statusMutation.isPending}
+                    className="btn-primary mt-1 w-full"
+                  >
+                    Move to In Progress
+                  </button>
+                )}
+
+                {ticket.status === "IN_PROGRESS" && (
+                  <button
+                    onClick={() => statusMutation.mutate("CLOSED")}
+                    disabled={statusMutation.isPending}
+                    className="btn-primary mt-1 w-full"
+                  >
+                    Move to Closed
+                  </button>
+                )}
+
+                {ticket.status === "CLOSED" && (
+                  <button
+                    disabled
+                    className="btn-secondary mt-1 w-full"
+                  >
+                    Ticket Closed
+                  </button>
+                )}
               </div>
               <div>
                 <label className="text-sm text-gray-500">Priority</label>

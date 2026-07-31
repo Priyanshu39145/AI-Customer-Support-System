@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,10 +21,10 @@ import java.io.IOException;
  * JWT Authentication Filter.
  *
  * PRODUCTION FIX #5: Bypass auth endpoints
- * - /auth/refresh uses REFRESH TOKEN only, not access token
+ * - /auth/refresh uses the refresh-token cookie, not an access token
  * - This endpoint should not require JWT validation
  * - Without this bypass, the filter would try to validate JWT
- *   but /auth/refresh sends refresh token in body, not JWT in header
+ *   but /auth/refresh uses a different HttpOnly cookie
  * - This would cause 401 errors on refresh attempts
  */
 @RequiredArgsConstructor
@@ -41,11 +42,17 @@ public class JWTAuthFilter extends OncePerRequestFilter { //OncePerRequestFilter
      */
     //These endpoints are public and dont need JWT Authentication ---
     private static final String[] BYPASS_PATHS = {
-        "/auth/refresh",  // Uses refresh token in request body
-        "/auth/logout",   // Session handled differently
-        "/auth/login",   // No auth needed
-        "/auth/register", // Registration doesn't need JWT
-        "/oauth2/",    // OAuth2 flow endpoints
+        "/auth/refresh",
+        "/auth/logout",
+        "/auth/login",
+        "/auth/register",
+        "/auth/csrf",
+        "/api/auth/refresh",
+        "/api/auth/logout",
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/csrf",
+        "/oauth2/",
     };
 
     /**
@@ -82,40 +89,45 @@ public class JWTAuthFilter extends OncePerRequestFilter { //OncePerRequestFilter
 
         try {
             log.debug("JWTAuthFilter processing: {}", request.getRequestURI());
+            //Instead of extracting header ---- we get the access token from the cookie ---
+            String token = getCookieValue(request, AuthenticationCookieService.ACCESS_TOKEN_COOKIE);
+            log.info("JWT cookie present: {}", token != null);
 
-            // Get Authorization header
-            final String header = request.getHeader("Authorization");
-
-            // No valid Authorization header - let it pass through
+            // No access-token cookie - let Spring Security return the authentication error.
             // Security config will handle unauthorized access
-            if (header == null || !header.startsWith("Bearer ")) {
+            if (token == null || token.isBlank()) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // Extract JWT token (everything after "Bearer ")
-            String token = header.substring(7);
-
             // Get username from token
             //This method internally validates the token using the secret key and then it returns the user from the token ---
             String username = authUtil.getUserNamefromToken(token); // --- See the getUserNamefromToken method in authUtil ---
-
+            log.info("Username from JWT: {}", username);
             if (username == null) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
+
             // Check if SecurityContext already has authentication
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                log.info("SecurityContext before auth: {}",
+                        SecurityContextHolder.getContext().getAuthentication());
                 // Load user from database
                 User user = userRepository.findByEmail(username).orElse(null);
-
-                if (user != null) {
+                //IF user is null or it is not enabled ---- then authentication is not allowrd
+                if (user != null && user.isEnabled()) {
                     // Create authentication token with user's authorities --- and then set it inside the SecurityContextHolder
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                     log.debug("User authenticated: {}", username);
+                    log.info("User found: {}", user != null ? user.getEmail() : "null");
+                    log.info("Authentication set for {}", username);
+                    log.info("SecurityContext after auth: {}",
+                            SecurityContextHolder.getContext().getAuthentication());
                 }
             }
 
@@ -126,27 +138,18 @@ public class JWTAuthFilter extends OncePerRequestFilter { //OncePerRequestFilter
             handlerExceptionResolver.resolveException(request, response, null, e);
         }
     }
-}
 
-//Complete Flow ---
-/*
-Incoming Request
-       ↓
-JWTAuthFilter
-       ↓
-Extract Authorization header
-       ↓
-Extract JWT token
-       ↓
-Extract username
-       ↓
-Load user from DB
-       ↓
-Create Authentication object
-       ↓
-Store inside SecurityContext
-       ↓
-Spring Security now trusts user
-       ↓
-Controller access granted
- */
+    private String getCookieValue(HttpServletRequest request, String cookieName) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (cookieName.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+}

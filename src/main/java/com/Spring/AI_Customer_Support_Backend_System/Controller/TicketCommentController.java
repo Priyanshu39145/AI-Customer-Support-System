@@ -25,7 +25,7 @@ public class TicketCommentController {
     private final TicketCommentService ticketCommentService;
     //Here we get all the comments for a ticket --- accessible for both user and agent of a particular ticket
     @GetMapping("/tickets/{ticketId}/comments")
-    @PreAuthorize("hasAnyRole('USER', 'AGENT')")
+    @PreAuthorize("hasAnyRole('USER', 'AGENT', 'ADMIN')")
     public ResponseEntity<List<TicketCommentResponseDTO>> getCommentsForTicket(@PathVariable String ticketId) {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ticketCommentService.getCommentsForTicket(ticketId, user));
@@ -33,7 +33,7 @@ public class TicketCommentController {
 
     //Here we post a comment over a ticket --- accessible for both user and agent ----
     @PostMapping("/tickets/{ticketId}/comments")
-    @PreAuthorize("hasAnyRole('USER', 'AGENT')")
+    @PreAuthorize("hasAnyRole('USER', 'AGENT', 'ADMIN')")
     public ResponseEntity<TicketCommentResponseDTO> addComment(@PathVariable String ticketId,
                                                                @Valid @RequestBody TicketCommentRequestDTO requestDTO) {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();

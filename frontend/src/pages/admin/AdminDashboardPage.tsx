@@ -8,6 +8,7 @@ import dashboardService from '@/services/dashboardService';
 import { PageLoader } from '@/components/UI/LoadingSpinner';
 import { useToast } from '@/components/Toast/ToastProvider';
 import clsx from 'clsx';
+import { useEffect, useState } from "react";
 
 const PIE_COLORS = ['#f59e0b', '#3b82f6', '#22c55e'];
 
@@ -60,8 +61,15 @@ export const AdminDashboardPage = () => {
     retry: 1,
   });
 
-  if (isLoading) return <PageLoader />;
-  if (error) showToast('error', 'Failed to load dashboard stats');
+  useEffect(() => {
+    if (error) {
+      showToast('error', 'Failed to load dashboard stats');
+    }
+  }, [error, showToast]);
+
+  if (isLoading) {
+    return <PageLoader />;
+  }
 
   const ticketData = [
     { name: 'Open', value: stats?.openTickets || 0 },

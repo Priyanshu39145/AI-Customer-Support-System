@@ -15,7 +15,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading, isHydrated } = useAuth();
   const location = useLocation();
 
-  // Phase 1: Still hydrating from localStorage
+  // Still checking the cookie-backed session.
   if (!isHydrated) {
     return <PageLoader />;
   }

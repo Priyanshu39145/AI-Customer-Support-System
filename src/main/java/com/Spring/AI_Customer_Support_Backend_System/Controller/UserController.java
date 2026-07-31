@@ -1,5 +1,6 @@
 package com.Spring.AI_Customer_Support_Backend_System.Controller;
 
+import com.Spring.AI_Customer_Support_Backend_System.DTO.AgentResponseDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.UpdateRoleRequestDTO;
 import com.Spring.AI_Customer_Support_Backend_System.DTO.UserProfileDTO;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
@@ -61,9 +62,9 @@ public class UserController {
     //Here similarly ---- we give the admin ---- all the agents ----
     @GetMapping("/admin/agents")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> getAllAgents() {
+    public ResponseEntity<List<AgentResponseDTO>> getAllAgents() {
 
-        List<User> agents = userRepository.findByRole(RoleType.AGENT);
+        List<AgentResponseDTO> agents = userService.getAllAgents();
 
         return ResponseEntity.ok(agents);
     }

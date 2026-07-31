@@ -1,6 +1,7 @@
 package com.Spring.AI_Customer_Support_Backend_System.DTO;
 
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +13,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LoginResponseDTO {
 
+    @JsonIgnore
     private String accessToken;
+    @JsonIgnore
     private String refreshToken;
     private UserDTO user;
 
@@ -32,4 +35,6 @@ public class LoginResponseDTO {
         this.refreshToken = null;
     }
 }
+
+
 

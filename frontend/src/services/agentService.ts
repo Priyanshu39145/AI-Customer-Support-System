@@ -1,10 +1,11 @@
 import api from './api';
 
 export interface Agent {
-  id: string;
+  agentId: string;
   name: string;
   email: string;
   categories: string[];
+  activeTicketCount?: number;
 }
 
 export interface AssignCategoriesRequest {

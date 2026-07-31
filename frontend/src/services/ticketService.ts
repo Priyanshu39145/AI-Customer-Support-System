@@ -15,7 +15,6 @@ export type CategoryType =
 export interface TicketResponse {
   id: string;
   title: string;
-  description?: string;
   status: StatusType;
   priority: PriorityType;
   category: CategoryType;
@@ -31,12 +30,11 @@ export interface TicketResponse {
 
 export interface TicketDetailedResponse extends TicketResponse {
   conversationId?: string;
-  history?: TicketActivityResponse[];
-  comments?: TicketCommentResponse[];
 }
 
 export interface TicketActivityResponse {
-  actionType: string;
+    id: string;
+  action: string;
   performedById: string;
   performedByName: string;
   oldValue?: string;
@@ -78,6 +76,18 @@ interface TicketParams {
   status?: StatusType;
   priority?: PriorityType;
   category?: CategoryType;
+
+  assignedToId?: string;
+  createdFrom?: string;
+  createdTo?: string;
+}
+
+export interface CreateTicketResponse {
+    id: string;
+    title: string;
+    status: StatusType;
+    priority: PriorityType;
+    category: CategoryType;
 }
 
 export const ticketService = {
@@ -92,25 +102,13 @@ export const ticketService = {
     return response.data;
   },
 
-  async assignTicket(ticketId: string, agentId: string): Promise<TicketResponse> {
-
-    const response = await api.put(
-      `/tickets/${ticketId}/assign`,
-      null,
-      {
-        params: { agentId },
-      }
-    );
-
-    return response.data;
-  },
 
   async getTicketHistory(ticketId: string): Promise<TicketActivityResponse[]> {
     const response = await api.get(`/tickets/${ticketId}/history`);
     return response.data;
   },
 
-  async createTicket(data: CreateTicketRequest): Promise<TicketResponse> {
+  async createTicket(data: CreateTicketRequest): Promise<CreateTicketResponse> {
     const response = await api.post('/tickets', data);
     return response.data;
   },

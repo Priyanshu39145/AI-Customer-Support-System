@@ -29,7 +29,8 @@ export const LoginPage = () => {
   });
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:8080/auth/oauth2/authorization/google';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    window.location.href = `${apiBaseUrl}/auth/oauth2/authorization/google`;
   };
 
   const onSubmit = async (data: LoginForm) => {
@@ -91,12 +92,6 @@ export const LoginPage = () => {
                 <label className="block text-sm font-medium text-[var(--color-text)]">
                   Password
                 </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-primary-600 hover:text-primary-700"
-                >
-                  Forgot?
-                </Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-tertiary)]" />

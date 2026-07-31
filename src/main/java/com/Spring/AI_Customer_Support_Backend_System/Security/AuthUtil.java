@@ -22,6 +22,9 @@ public class AuthUtil {
     @Value("${jwt.secretKey}")
     private String jwtSecretKey;
 
+    @Value("${jwt.accessTokenExpirationMinutes:15}")
+    private long accessTokenExpirationMinutes;
+
     //    This function creates and returns a cryptographic secret key that is typically used for signing and verifying JWTs (JSON Web Tokens) using HMAC algorithms like HS256.
     private SecretKey getSecretKey()    {
         return Keys.hmacShaKeyFor(jwtSecretKey.getBytes(StandardCharsets.UTF_8));
@@ -36,7 +39,7 @@ public class AuthUtil {
                 .subject(user.getEmail())
                 .claim("userId" , user.getId())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 1000*60*100))
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * accessTokenExpirationMinutes))
                 .signWith(getSecretKey())
                 .compact();
     }

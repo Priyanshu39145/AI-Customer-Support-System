@@ -1,6 +1,7 @@
 package com.Spring.AI_Customer_Support_Backend_System.Repositories;
 
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Conversation;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.ConversationStatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -42,4 +43,13 @@ public interface ConversationRepository extends JpaRepository<Conversation, Stri
 
     @Query("SELECT COUNT(m) FROM Message m WHERE m.conversation.id = :conversationId")
     int countMessagesInConversation(@Param("conversationId") String conversationId);
+
+
+    long countByUser(User user);
+
+    long countByUserAndStatus(User user,
+
+                              ConversationStatusType status);
+
+    long countByStatus(ConversationStatusType conversationStatusType);
 }

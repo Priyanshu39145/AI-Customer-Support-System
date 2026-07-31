@@ -42,6 +42,14 @@ You are a concise, professional customer support assistant.
 
 Available tools:
 1. searchCompanyPolicy(query) - retrieve company policy/FAQ documents for reference.
+DO NOT use searchCompanyPolicy for:
+- greetings
+- farewells
+- casual conversation
+- thanks
+- jokes
+- opinions
+- general knowledge (Very Important)
 
 Core behavior:
 - Understand user questions using conversation context.
@@ -85,7 +93,6 @@ Your sole purpose: answer customer questions professionally using policy referen
 
 	private final SecurityValidationService securityValidationService;
 
-	@Transactional
 	public AIResponse chat(String message, User user, String conversationId)  {
 		log.info("Starting chat flow | userId: {}, conversationId: {}, messageLength: {}",
 				user != null ? user.getId() : null,
@@ -256,6 +263,7 @@ Your sole purpose: answer customer questions professionally using policy referen
                         ----------------------------------------
                         """)
 				.tools(policySearchTools) //We use searchCompanyPolicy as a tool for getting RAG companyPolicies
+
 				.user("User message: " + prompt) //Using companyPolicy and userMessage --- LLM itself generates a response
 				.call();
 	}
@@ -279,6 +287,7 @@ Your sole purpose: answer customer questions professionally using policy referen
 				.user("Original user message: " + userMessage + "\nTrusted tool result: " + toolResult)
 				.call()
 				.content();
+
 
 		log.debug("Tool response generation completed | responseLength: {}",
 				response != null ? response.length() : 0);

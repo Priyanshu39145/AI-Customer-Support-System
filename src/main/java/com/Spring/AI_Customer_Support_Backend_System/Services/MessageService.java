@@ -97,7 +97,9 @@ public class MessageService {
                         m.getId(),
                         m.getContent(),
                         m.getSender(), //this is of SenderType ---- The frontend will handle other things
-                        m.getSenderUser().getId(),
+                        m.getSenderUser() != null
+                                ? m.getSenderUser().getId()
+                                : null,
                         m.getCreatedAt()
                 ))
                 .toList();

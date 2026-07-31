@@ -17,7 +17,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolationException(DataIntegrityViolationException e)    {
-        ApiError err = new ApiError("Conflict, user already exists: " + e.getMessage(), HttpStatus.CONFLICT);
+        ApiError err = new ApiError("Resource already exists.", HttpStatus.CONFLICT);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
     }
 

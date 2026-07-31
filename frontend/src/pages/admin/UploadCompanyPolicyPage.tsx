@@ -14,6 +14,15 @@ export const UploadCompanyPolicyPage = () => {
       showToast('error', 'Please select a PDF file');
       return;
     }
+    if (file.type !== 'application/pdf') {
+      showToast('error', 'Please select a PDF file');
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('error', 'File exceeds 20MB limit');
+      return;
+    }
 
     try {
       setIsUploading(true);
@@ -66,6 +75,26 @@ export const UploadCompanyPolicyPage = () => {
             accept=".pdf"
             onChange={(e) => {
               const selectedFile = e.target.files?.[0] || null;
+
+              if (!selectedFile) {
+                setFile(null);
+                return;
+              }
+
+              if (selectedFile.type !== 'application/pdf') {
+                showToast('error', 'Please select a PDF file');
+                e.target.value = '';
+                setFile(null);
+                return;
+              }
+
+              if (selectedFile.size > 20 * 1024 * 1024) {
+                showToast('error', 'File exceeds 20MB limit');
+                e.target.value = '';
+                setFile(null);
+                return;
+              }
+
               setFile(selectedFile);
             }}
             className="input"
@@ -79,6 +108,10 @@ export const UploadCompanyPolicyPage = () => {
 
               <p className="text-sm text-gray-500">
                 {file.name}
+              </p>
+
+              <p className="text-xs text-gray-400">
+                {(file.size / (1024 * 1024)).toFixed(2)} MB
               </p>
             </div>
           )}

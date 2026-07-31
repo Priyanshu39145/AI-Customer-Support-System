@@ -17,7 +17,6 @@ import { ChatPage } from '@/pages/ChatPage';
 import { AgentTicketsPage } from '@/pages/agent/AgentTicketsPage';
 import { AgentTicketDetailPage } from '@/pages/agent/AgentTicketDetailPage';
 import { PageLoader } from '@/components/UI/LoadingSpinner';
-import { getRefreshToken } from '@/services/api';
 import { UploadCompanyPolicyPage } from '@/pages/admin/UploadCompanyPolicyPage';
 import { UsersPage } from '@/pages/admin/UsersPage';
 
@@ -26,37 +25,19 @@ const AgentDashboardPage = () => <DashboardPage />;
 /**
  * App root component.
  *
- * PRODUCTION FIX #2: Proper Hydration Flow
- * - Show loading ONLY while isHydrated is false (restoring from localStorage)
- * - Once hydrated: show app immediately
- * - If user is null but refreshToken exists: allow render
- *   First API call will fetch user data
+ * The auth provider hydrates from the protected /api/auth/me endpoint.
  * - ProtectedRoute handles actual auth checks
  */
 function App() {
   const { isLoading, isHydrated, user } = useAuth();
 
-  // Phase 1: Still hydrating from localStorage
-  // This is very fast - just reading from storage
   if (!isHydrated || isLoading) {
     return <PageLoader />;
   }
 
-  // Phase 2: Hydrated but still fetching user data
-  // Only show loading if we have tokens but no user data yet
-  // This handles edge case where user data wasn't stored but tokens exist
-  // First API call will populate user data
-
-
-  // Only block rendering if we have tokens but no user AND we haven't tried to load user yet
-  // Otherwise render the app - interceptor will handle auth on API calls
-  // For now, render user as null but authenticated (so protected routes work)
-
   // Get default dashboard based on role
   const getDefaultDashboard = () => {
     if (!user) {
-      // No user yet but might have tokens - go to user dashboard
-      // First API call will fetch user details
       return '/dashboard';
     }
     switch (user.role) {
@@ -99,7 +80,7 @@ function App() {
         <Route
           path="conversations"
           element={
-            <RoleGuard allowedRoles={['USER', 'AGENT', 'ADMIN']}>
+            <RoleGuard allowedRoles={['USER']}>
               <ConversationsPage />
             </RoleGuard>
           }
@@ -107,7 +88,7 @@ function App() {
         <Route
           path="chat"
           element={
-            <RoleGuard allowedRoles={['USER', 'AGENT', 'ADMIN']}>
+            <RoleGuard allowedRoles={['USER']}>
               <ChatPage />
             </RoleGuard>
           }
@@ -115,7 +96,7 @@ function App() {
         <Route
           path="chat/:conversationId"
           element={
-            <RoleGuard allowedRoles={['USER', 'AGENT', 'ADMIN']}>
+            <RoleGuard allowedRoles={['USER']}>
               <ChatPage />
             </RoleGuard>
           }
@@ -149,7 +130,7 @@ function App() {
         <Route
           path="agent/dashboard"
           element={
-            <RoleGuard allowedRoles={['AGENT', 'ADMIN']}>
+            <RoleGuard allowedRoles={['AGENT']}>
               <AgentDashboardPage />
             </RoleGuard>
           }
@@ -157,7 +138,7 @@ function App() {
         <Route
           path="agent/tickets"
           element={
-            <RoleGuard allowedRoles={['AGENT', 'ADMIN']}>
+            <RoleGuard allowedRoles={['AGENT']}>
               <AgentTicketsPage />
             </RoleGuard>
           }
@@ -165,7 +146,7 @@ function App() {
         <Route
           path="agent/tickets/:ticketId"
           element={
-            <RoleGuard allowedRoles={['AGENT', 'ADMIN']}>
+            <RoleGuard allowedRoles={['AGENT']}>
               <AgentTicketDetailPage />
             </RoleGuard>
           }
@@ -189,8 +170,12 @@ function App() {
           }
         />
         <Route
-          path="/admin/company-policy"
-          element={<UploadCompanyPolicyPage />}
+            path="/admin/company-policy"
+            element={
+                <RoleGuard allowedRoles={['ADMIN']}>
+                    <UploadCompanyPolicyPage />
+                </RoleGuard>
+            }
         />
         <Route
           path="admin/agents/:agentId/categories"
@@ -209,8 +194,12 @@ function App() {
           }
         />
         <Route
-          path="/admin/users"
-          element={<UsersPage />}
+          path="admin/users"
+          element={
+            <RoleGuard allowedRoles={['ADMIN']}>
+              <UsersPage />
+            </RoleGuard>
+          }
         />
         <Route
           path="admin/tickets/:ticketId"

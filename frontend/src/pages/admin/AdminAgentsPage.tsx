@@ -5,19 +5,22 @@ import agentService from '@/services/agentService';
 import { PageLoader } from '@/components/UI/LoadingSpinner';
 import { EmptyState } from '@/components/UI/EmptyState';
 import { useToast } from '@/components/Toast/ToastProvider';
+import { useEffect, useState } from "react";
 
 export const AdminAgentsPage = () => {
   const { showToast } = useToast();
 
   const { data: agents, isLoading, error } = useQuery({
     queryKey: ['agents'],
-    queryFn: () => agentService.getAgents(),
+    queryFn: () => agentService.getAllAgents(),
     retry: 1,
   });
 
-  if (error) {
-    showToast('error', 'Failed to load agents');
-  }
+  useEffect(() => {
+    if (error) {
+      showToast('error', 'Failed to load agents');
+    }
+  }, [error, showToast]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -36,7 +39,7 @@ export const AdminAgentsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {agents?.map((agent) => (
             <div
-              key={agent.id}
+              key={agent.agentId}
               className="bg-white dark:bg-gray-800 border border-[var(--color-border)] rounded-xl p-5"
             >
               <div className="flex items-center gap-4">

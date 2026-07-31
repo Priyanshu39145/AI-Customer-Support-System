@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,7 +21,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export const RegisterPage = () => {
   const { register: registerUser } = useAuth();
-  const navigate = useNavigate();
+
   const { showToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,7 +39,6 @@ export const RegisterPage = () => {
     try {
       await registerUser({ name: data.name, email: data.email, password: data.password });
       showToast('success', 'Registration successful!');
-      navigate('/login');
     } catch (error) {
       showToast('error', 'Registration failed. Please try again.');
     } finally {

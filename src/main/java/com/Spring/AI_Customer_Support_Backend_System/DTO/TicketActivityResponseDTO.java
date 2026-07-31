@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TicketActivityResponseDTO implements Serializable {
-
+    private String id;
     private ActionType action;
     private String performedById;
     private String performedByName;

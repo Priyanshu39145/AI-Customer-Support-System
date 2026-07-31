@@ -37,6 +37,7 @@ public class User implements UserDetails { //implementing UserDetails tells Spri
     @Column(nullable = false , unique = true)
     private String email;
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -69,7 +70,7 @@ public class User implements UserDetails { //implementing UserDetails tells Spri
     private List<Ticket> assignedTickets;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "sender")
+    @OneToMany(mappedBy = "senderUser")
     private List<Message> messages;
 
     @CreationTimestamp

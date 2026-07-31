@@ -86,11 +86,19 @@ public class ConversationService {
                 user != null ? user.getId() : null,
                 message != null ? message.length() : 0);
 
-        String title = ollamaChatClient.prompt()
-                .system("You should convert the given message into a meaningful and short conversation title of max 5 words only")
-                .user(message)
-                .call()
-                .content();
+        String title = null;
+
+        try {
+            title = ollamaChatClient.prompt()
+                    .system("You should convert the given message into a meaningful and short conversation title of max 5 words only")
+                    .user(message)
+                    .call()
+                    .content();
+        }
+        catch (Exception e) {
+            log.info("Title generation failed");
+            title = "New Conversation";
+        }
 
         if(title.length()>50)
             title = title.substring(0,49);

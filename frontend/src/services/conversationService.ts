@@ -5,9 +5,9 @@ export interface Conversation {
   conversationTitle: string;
 }
 
-export interface CreateConversationRequest {
-  title?: string;
-}
+// export interface CreateConversationRequest {
+//   title?: string;
+// }
 
 export const conversationService = {
   async getConversations(): Promise<Conversation[]> {

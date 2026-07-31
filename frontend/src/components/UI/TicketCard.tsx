@@ -43,10 +43,7 @@ export const TicketCard = ({ ticket }: TicketCardProps) => {
         <TicketStatusBadge status={ticket.status} />
       </div>
 
-      {/* Description */}
-      <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2 mb-4">
-        {ticket.description}
-      </p>
+
 
       {/* Tags */}
       <div className="flex items-center gap-2 flex-wrap mb-4">

@@ -1,6 +1,7 @@
 import { MoreVertical, Edit, Trash, XCircle, Sparkles } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Conversation } from '@/services/conversationService';
+import { useToast } from '@/components/Toast/ToastProvider';
 import clsx from 'clsx';
 
 interface ConversationCardProps {
@@ -19,7 +20,11 @@ export const ConversationCard = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState(conversation.conversationTitle);
+  useEffect(() => {
+                                        setEditTitle(conversation.conversationTitle);
+                                    }, [conversation.conversationTitle]);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -32,9 +37,22 @@ export const ConversationCard = ({
   }, []);
 
   const handleRename = () => {
-    if (editTitle.trim() && editTitle !== conversation.conversationTitle) {
-      onRename(conversation.conversationId, editTitle.trim());
+    const trimmedTitle = editTitle.trim();
+
+    if (!trimmedTitle) {
+      setEditMode(false);
+      return;
     }
+
+    if (trimmedTitle.length > 80) {
+      showToast('error', 'Title cannot exceed 80 characters');
+      return;
+    }
+
+    if (trimmedTitle !== conversation.conversationTitle) {
+      onRename(conversation.conversationId, trimmedTitle);
+    }
+
     setEditMode(false);
   };
 
@@ -48,6 +66,7 @@ export const ConversationCard = ({
             onChange={(e) => setEditTitle(e.target.value)}
             onBlur={handleRename}
             onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+            maxLength={80}
             className="input text-sm py-1.5 flex-1"
             autoFocus
           />

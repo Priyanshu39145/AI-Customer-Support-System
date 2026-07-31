@@ -66,6 +66,7 @@ public class TicketActivityService {
         User performedBy = activity.getPerformedBy();
 
         return new TicketActivityResponseDTO(
+                activity.getId(),
                 activity.getActionType(),
                 performedBy != null ? performedBy.getId() : null,
                 performedBy != null ? performedBy.getName() : null,

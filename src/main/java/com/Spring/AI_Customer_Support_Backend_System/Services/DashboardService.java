@@ -5,11 +5,13 @@ import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.PriorityType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.RoleType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.StatusType;
 import com.Spring.AI_Customer_Support_Backend_System.Entities.User;
+import com.Spring.AI_Customer_Support_Backend_System.Repositories.ConversationRepository;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import com.Spring.AI_Customer_Support_Backend_System.Entities.Type.ConversationStatusType;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 public class DashboardService {
 
     private final TicketRepository ticketRepository;
+    private final ConversationRepository conversationRepository;
 
     public DashboardStatsDTO getStats(User user) {
 
@@ -40,8 +43,10 @@ public class DashboardService {
                     .inProgressTickets(ticketRepository.countByStatus(StatusType.IN_PROGRESS))
 
                     .closedTickets(ticketRepository.countByStatus(StatusType.CLOSED))
-                    .totalConversations(0)
-                    .activeConversations(0)
+                    .totalConversations(conversationRepository.count())
+                    .activeConversations(conversationRepository.countByStatus(
+                            ConversationStatusType.ACTIVE
+                    ))
                     .build();
         }
 
@@ -64,8 +69,8 @@ public class DashboardService {
                 .inProgressTickets(ticketRepository.countByCreatedByAndStatus(user, StatusType.IN_PROGRESS))
 
                 .closedTickets(ticketRepository.countByCreatedByAndStatus(user, StatusType.CLOSED))
-                .totalConversations(0)
-                .activeConversations(0)
+                .totalConversations(conversationRepository.countByUser(user))
+                .activeConversations(conversationRepository.countByUserAndStatus(user,ConversationStatusType.ACTIVE))
                 .build();
     }
 }

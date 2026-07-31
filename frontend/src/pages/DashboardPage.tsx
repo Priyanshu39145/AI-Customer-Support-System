@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from "react";
 import { Ticket, MessageSquare, Clock, CheckCircle, AlertCircle, TrendingUp, ArrowRight, Plus } from 'lucide-react';
 import {
   BarChart,
@@ -81,8 +82,15 @@ export const DashboardPage = () => {
     retry: 1,
   });
 
-  if (isLoading) return <PageLoader />;
-  if (error) showToast('error', 'Failed to load dashboard stats');
+  useEffect(() => {
+    if (error) {
+      showToast('error', 'Failed to load dashboard stats');
+    }
+  }, [error, showToast]);
+
+  if (isLoading) {
+      return <PageLoader />;
+  }
 
   const statCards = [
     {

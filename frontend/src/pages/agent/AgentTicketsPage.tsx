@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import ticketService, { StatusType, PriorityType } from '@/services/ticketService';
@@ -7,6 +6,7 @@ import { SearchBar } from '@/components/UI/SearchBar';
 import { Pagination } from '@/components/UI/Pagination';
 import { EmptyState } from '@/components/UI/EmptyState';
 import { useToast } from '@/components/Toast/ToastProvider';
+import { useEffect, useState } from 'react';
 
 export const AgentTicketsPage = () => {
   const { showToast } = useToast();
@@ -29,9 +29,11 @@ export const AgentTicketsPage = () => {
     retry: 1,
   });
 
-  if (error) {
-    showToast('error', 'Failed to load tickets');
-  }
+  useEffect(() => {
+    if (error) {
+      showToast('error', 'Failed to load tickets');
+    }
+  }, [error, showToast]);
 
   return (
     <div className="space-y-6">
@@ -49,7 +51,7 @@ export const AgentTicketsPage = () => {
           <option value="">All Status</option>
           <option value="OPEN">Open</option>
           <option value="IN_PROGRESS">In Progress</option>
-
+          <option value="CLOSED">Closed</option>
         </select>
         <select value={priority} onChange={(e) => setPriority(e.target.value as PriorityType)} className="input w-40">
           <option value="">All Priority</option>
@@ -72,9 +74,10 @@ export const AgentTicketsPage = () => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {data?.content.map((ticket) => (
-              <Link key={ticket.id} to={`/agent/tickets/${ticket.id}`}>
-                <TicketCard ticket={ticket} />
-              </Link>
+                <TicketCard
+                    key={ticket.id}
+                    ticket={ticket}
+                />
             ))}
           </div>
           {data && <Pagination currentPage={page} totalPages={data.totalPages} onPageChange={setPage} />}

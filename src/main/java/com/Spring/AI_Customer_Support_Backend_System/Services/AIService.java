@@ -156,7 +156,7 @@ public class AIService {
     //It is cached for similar messages ----
     @Cacheable(
             value = "ticketAnalysis",
-            key = "#message.hashCode()",
+            key = "#message",
             unless = "#result == null || #result.reason.contains('failed')"
     )
     //This method returns the ticketDetails from the userMessage --- with the help of LLM call ---
@@ -229,7 +229,7 @@ public class AIService {
     }
 
     //We dont fully trust the AI --- so even after the AI response --- we normalize the Intent ---
-    private IntentAnalysisDTO normalizeIntent(IntentAnalysisDTO analysis, boolean hasExistingTicket) {
+    IntentAnalysisDTO normalizeIntent(IntentAnalysisDTO analysis, boolean hasExistingTicket) {
         //If the analysis is null --- then we return fallback ----
         if (analysis == null) {
             return IntentAnalysisDTO.fallback(hasExistingTicket);

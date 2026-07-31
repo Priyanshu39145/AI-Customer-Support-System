@@ -1,0 +1,264 @@
+I am adding some changes ---- for production improvement ----
+--------------------------------------------------------------------------------
+First Change #######################
+Old Flow ----
+User logs in
+      │
+      ▼
+Backend returns:
+{
+   accessToken,
+   refreshToken,
+   user
+}
+
+      │
+      ▼
+Frontend stores tokens in localStorage
+
+      │
+      ▼
+Every request:
+
+Authorization: Bearer <access token>
+
+      │
+      ▼
+401
+
+      │
+      ▼
+Frontend reads refresh token
+calls /refresh
+stores new tokens
+
+
+Problems:
+
+* JWTs accessible to JavaScript
+* XSS can steal tokens
+* OAuth tokens visible in URL
+* Tokens persisted in localStorage
+* Refresh token persisted forever until logout
+
+
+New Flow ----
+
+Login
+
+      │
+      ▼
+Backend
+
+      │
+      ▼
+Set-Cookie:
+access_token (HttpOnly)
+
+Set-Cookie:
+refresh_token (HttpOnly)
+
+      │
+      ▼
+Browser stores cookies
+
+      │
+      ▼
+Every request automatically sends cookies
+
+      │
+      ▼
+Backend authenticates
+
+      │
+      ▼
+Frontend only asks:
+
+GET /api/auth/me
+
+↓
+
+Current user
+
+Now the browser manages authentication.
+
+The frontend never sees the JWT.
+
+Now see the changes -----
+1) FIrst of all see the LoginResponseDTO ----- we have applied @JsonIgnore to accessToken and RefreshToken --- so that inside the Login response send to the browser ---- the credentials are not exposed -----
+
+2) Inside the AuthUtil ---- instead of hardcoded access token expiration time ---- we have added a variable inside application.properties that has the expiration time of the access token ---- and then imported it inside AuthUtil using @Value keyword. We have also refactored the setting of the expirationTime inside the generate Access token function.
+
+3) We create a AuthenticationCookieService ----- AuthenticationCookieService is responsible for managing the application's authentication cookies. After a user logs in, it stores the access token and refresh token as secure, HttpOnly cookies in the browser. When the user logs out, it removes these cookies by expiring them immediately, while applying the configured security settings (such as Secure, SameSite, and HttpOnly) to every cookie it creates.
+
+4) We have made changes inside the application.properties so that the required env variables are imported safely
+
+5) Inside the JWTAuthFilter ---- we have made some good changes ---- Earlier ---- Header -> Extract Bearer Token -> Validate. Now Cookie -> access_token -> validate.
+
+6) We have made some changes inside the SecurityConfig due to the introduce of the cookie strategy ---- The SecurityConfig was updated to support cookie-based JWT authentication instead of sending JWTs in the Authorization header. CSRF protection was enabled using CookieCsrfTokenRepository, new public authentication endpoints (including a CSRF endpoint) were explicitly permitted, the CORS configuration was updated to allow the X-XSRF-TOKEN header instead of the Authorization header, and the OAuth2 failure redirect was made configurable through application properties. Additionally, a custom csrfTokenRepository() method was added to configure the CSRF cookie's security settings, such as Secure, SameSite, Path, and optional Domain, ensuring secure authentication when using browser cookies.
+
+7) Inside the oAuth2SuccessHandler ---- after Google login redirect looked like /oauth2/callback?accessToken=...refreshToken=...user=... ---- This is dangerous --- browser history, etc can access the access token ---- Now on oAuth2Success we set cookies for access and refresh tokens
+
+8) Inside the AuthController ---- we have made some significant changes ---- like inside the login() method --- we set the cookies too --- inside the refresh method --- we update the cookies --- inside the logout we clear the cookies ---- we also have a me endpoint which gives us the current user since we dont store it in the localStorage now --- also we have get csrf endpoint to generate csrf token ---
+
+9) Frontend changes ---- In simple terms, the frontend stopped managing login tokens completely and now lets the browser handle authentication automatically. Earlier, after login it would receive access and refresh tokens, save them in localStorage, attach them to every API request, and even read tokens from the OAuth callback URL. Now, after login the backend stores the tokens in secure HttpOnly cookies that JavaScript cannot access. The frontend only asks the backend “Who is the currently logged-in user?” by calling /api/auth/me and keeps that user information only in memory while the app is open. Every API request automatically includes the authentication cookies because withCredentials is enabled, so there is no need to manually send an Authorization header. If the access token expires, Axios automatically performs a single refresh request using the refresh cookie, retries the failed request, and if the refresh also fails, the user is logged out. For security, the frontend first fetches a CSRF token and sends it with all POST, PUT, PATCH, and DELETE requests. The Google OAuth callback page was also simplified—it no longer reads tokens from the URL and instead simply asks the backend for the logged-in user. Overall, the frontend became much simpler: it no longer stores, reads, refreshes, or manages authentication tokens itself; it just displays the logged-in user while the browser and backend securely handle the authentication behind the scenes.
+
+
+Revised Auth Flow ----
+User Login
+      │
+      ▼
+Backend authenticates credentials
+      │
+      ▼
+Create Access JWT (15 min)
+Create Refresh Token (7 days)
+      │
+      ▼
+Store refresh token hashed in DB
+      │
+      ▼
+Set HttpOnly Cookies
+(access_token + refresh_token)
+      │
+      ▼
+Browser stores cookies
+      │
+      ▼
+Frontend calls GET /api/auth/me
+      │
+      ▼
+User loaded into React state
+      │
+      ▼
+Every API request automatically includes cookies
+      │
+      ▼
+JWTAuthFilter validates access_token
+      │
+      ▼
+If access token expires:
+      │
+      ▼
+Axios interceptor calls /auth/refresh once
+      │
+      ▼
+Backend validates hashed refresh token
+      │
+      ▼
+Rotates refresh token
+Issues new cookies
+      │
+      ▼
+Original request is retried
+--------------------------------------------------------------------------------
+
+Second change -----
+Previously the application logged messages like:
+User authenticated successfully
+
+Fetching customer details
+
+Calling AI service
+
+Response generated successfully
+
+
+In a production environment handling hundreds of concurrent requests, these logs become interleaved.
+User A Login
+
+User B Generate Response
+
+User A Calling AI
+
+User C Payment
+
+User B Redis Lookup
+
+User A AI Response
+
+Although timestamps and user IDs were available, there was no reliable way to determine which log entries belonged to the same HTTP request, especially when a single user made multiple requests simultaneously.
+
+A Request Correlation mechanism has been introduced using:
+
+* Micrometer Tracing
+* SLF4J MDC (Mapped Diagnostic Context)
+* Custom RequestCorrelationFilter
+* Structured logging
+
+Each HTTP request now receives a unique Request ID which remains associated with that request throughout its processing lifecycle.
+
+In simple terms what we have done ----
+1. We have added springboot actuator and micrometer dependencies ----
+2. Then we have created a new RequestCorrelationFilter which gets the request id and stores it inside MDC ----
+HTTP Request
+        │
+        ▼
+RequestCorrelationFilter
+        │
+        ├── Generate Request ID
+        ├── Store in MDC
+        ├── Add Response Header
+        ▼
+Continue Filter Chain
+3. Then we have created a logging format inside the application.properties
+4. Every log now looks like this ----
+2026-07-26 14:35:11
+
+traceId=8a71d2...
+
+spanId=95bc...
+
+requestId=e23a1d...
+
+INFO UserService - User authenticated successfully
+--------------------------------------------------------------------------------
+
+Third change -----
+We have added some tests inside our project -----
+
+1)  First we have removed the previous tests like makeadmin() or makeagent() which I had used to assign a dummy user admin or agent role ---- that is not required now
+
+2) Inside the AIService I have changed the private normalizeIntent function to default access specifier ---- so that Java Reflection API can access normalize Intent better for the tests
+
+3) Added H2 DB dependency ---- Normally my application uses MariaDB which uses Docker. H2 is an in memory SQL database. When tests starts, DB is created, Tests run, Database disappears, No Docker, No cleanup required.
+
+4) SecurityValidationTest, AIServiceTest and UserRepositoryTest ---- see those
+
+--------------------------------------------------------------------------------
+
+Fourth Change ----
+We have change some things inside the Chat flow ----
+
+1) First we have removed @Transactional from ChatService.chat() method ---- every DB write inside chat() is already self-transactional. messageRepository.save() and conversationRepository.save() get an implicit transaction per call from Spring Data JPA's SimpleJpaRepository regardless of an enclosing transaction, and toolService.createSupportTicket() re-fetches its own Conversation by ID rather than relying on the one already loaded in chat(). I also checked the entity mappings you'd be at risk from: Conversation.user (@ManyToOne) and Conversation.ticket (@OneToOne) are both EAGER by JPA default, so conversation.getUser() / conversation.getTicket() calls later in the method won't throw LazyInitializationException once the session closes.
+
+2) Removing @Transactional from ToolService.createSupportTicket() ---- Same reasoning. It already re-fetches Conversation fresh (conversationRepository.findById(conversationId)), and the actual write — ticketService.createTicket(...) — has its own @Transactional and is unaffected. The duplicate-ticket race is already handled defensively by catching DataIntegrityViolationException from a DB constraint, not by transaction isolation, so nothing here relies on the outer transaction for correctness.
+Worth knowing: ConversationService.createConversation() already does this correctly — it calls Ollama for the title before conversationRepository.save(), with no @Transactional spanning both. You're not introducing a new pattern with this fix, you're making the other two AI call sites consistent with a pattern that's already in your codebase.
+
+3) Add a new timeout for Ollama responses ---- Inside the AIConfig ---- we didnt have any timeout. This is the one that directly stops "a stuck Ollama process blocks threads indefinitely." Spring AI's OllamaApi.Builder accepts a custom RestClient.Builder; without one it falls back to Spring's default client with no read timeout. Give it a bounded JdkClientHttpRequestFactory:
+
+----------------------------------------------------------------------------------------------------------------
+
+Disabling csrf ---- for debugging ----
+I Found a bug that whenever I invoked a POST request ---- first it failed due to csrf ---- and then again doing it ---- it became right ---- I couldnt find the root cause ---- so I removed csrf protection ---- In production it is required though ----
+
+----------------------------------------------------------------------------------------------------------------
+
+I prevented RateLimitFilter to filter some endpoints like the authentication endpoints ----
+
+----------------------------------------------------------------------------------------------------------------
+
+In ConversationService ---- I gave a default conversation name when the LLM fails the request to give a title for a conversation.
+
+----------------------------------------------------------------------------------------------------------------
+
+In CompanyPolicyController ---- I have used ByteArrayResource ---- instead of normal Resource ----
+MultipartFile is stored by Tomcat as a temporary file for the duration of the HTTP request. Earlier, I passed file.getResource() to an @Async method, which only passed a reference to that temporary file. Once the controller returned, Tomcat deleted the temp file, so the async thread later failed with NoSuchFileException. The fix is to call file.getBytes() first and wrap those bytes in a ByteArrayResource, which creates an independent in-memory copy of the PDF. Now the async thread reads from memory instead of the deleted temporary file, making the upload process reliable.
+
+----------------- ----------------- ----------------- ----------------- ----------------- -----------------
+Greatest change -----
+
+I removed ollama container from Docker ---- so that I can run Ollama models locally inside my PC using my PC's GPU for faster outputs ----
+When I was using Ollama inside Docker ---- Docker was using CPU for all tasks ---- which led to 3 minutes to respond ---- Now I am using Ollama locally inside my PC ---- so now it takes max 45 seconds ----
+
+----------------------------------------------------------------------------------------------------------------

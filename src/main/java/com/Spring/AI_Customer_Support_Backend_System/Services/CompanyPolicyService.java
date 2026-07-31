@@ -6,6 +6,7 @@ import com.Spring.AI_Customer_Support_Backend_System.Entities.CompanyPolicy;
 import com.Spring.AI_Customer_Support_Backend_System.Repositories.CompanyPolicyRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.cache.annotation.CacheEvict;
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CompanyPolicyService {
 
     private final DataLoader dataLoader;
@@ -38,7 +40,11 @@ public class CompanyPolicyService {
     //We execute addCompanyPolicy in an Async way using CompletableFuture ----
     @Async
     public CompletableFuture<Void> processPolicy(Resource pdf){
-        addCompanyPolicy(pdf);
+        try {
+            addCompanyPolicy(pdf);
+        } catch (Exception e) {
+            log.error("Processing failed", e);
+        }
         return CompletableFuture.completedFuture(null);
     }
 
@@ -52,18 +58,41 @@ public class CompanyPolicyService {
         }
 
 
-
+        log.info("Getting file name");
         //We name the file unknown-policy.pdf --- if the pdf name is corrupted ---
         String fileName = pdf.getFilename() != null ? pdf.getFilename() : "unknown-policy.pdf";
         //We generate a Hash so that we can uniquely identify duplicate uploads ----
+        log.info("Generating file hash");
         String fileHash = generateHash(pdf);
         //Before going further go see the CompanyPolicy Entity ---
+//        log.info("File hash generated");
+//        // Duplicate check: skip ingestion when this company already uploaded the same file content.
+//        if (companyPolicyRepository.existsByFileHash(fileHash)) {
+//            return "Policy already exists. Skipping ingestion.";
+//        }
+//        log.info("Getting version");
 
-        // Duplicate check: skip ingestion when this company already uploaded the same file content.
-        if (companyPolicyRepository.existsByFileHash(fileHash)) {
+        log.info("File hash generated");
+
+        log.info("Before existsByFileHash");
+
+        boolean exists;
+
+        try {
+            exists = companyPolicyRepository.existsByFileHash(fileHash);
+            log.info("After existsByFileHash");
+            log.info("Exists = {}", exists);
+        } catch (Exception e) {
+            log.error("existsByFileHash failed", e);
+            throw e;
+        }
+
+        if (exists) {
+            log.info("Duplicate detected");
             return "Policy already exists. Skipping ingestion.";
         }
 
+        log.info("Getting version");
         // Versioning: same file name with changed content becomes the next policy version.
         //We find the file with the latest version of the same name with the current file ---
         //So if we have a new file --- and there exists an old file with the same name --- then we add version + 1 to the old version
@@ -72,12 +101,12 @@ public class CompanyPolicyService {
                 .map(policy -> policy.getVersion() + 1)
                 .orElse(1);
 
-
+        log.info("Going to load and transform documents");
         //We first convert the pdf text into verious documents using dataLoader ---
         // and then split those documents into smaller chunks of documents using dataTransformer
         List<Document> documents =
                 dataTransformer.transform(dataLoader.loadDocumentsFromPDF(pdf));
-
+        log.info("documents loaded and transformed");
         LocalDateTime uploadTime = LocalDateTime.now();
         //AtomicInteger is an Integer that is thread safe --- and prevents race condition ---
         AtomicInteger chunkCounter = new AtomicInteger(1);
@@ -98,9 +127,10 @@ public class CompanyPolicyService {
                 })
                 .toList();
 
-
+        log.info("Adding documents to vector store");
         // Storage: write enriched chunks into the vector store after duplicate/version checks.
         vectorStore.add(enrichedDocs);
+        log.info("Documents added to vector store");
 
         // Storage: save the policy record so future uploads can detect duplicates and versions.
         CompanyPolicy policy = CompanyPolicy.builder()
@@ -109,6 +139,7 @@ public class CompanyPolicyService {
                 .version(version)
                 .uploadedAt(uploadTime)
                 .build();
+        log.info("Saving company policy");
         companyPolicyRepository.save(policy);
 
         return "Documents are added Successfully. Version: " + version;

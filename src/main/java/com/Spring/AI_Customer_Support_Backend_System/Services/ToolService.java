@@ -77,7 +77,6 @@ public class ToolService {
 
 
     @Tool(name = "createSupportTicket", description = "Deterministically creates one support ticket for the current conversation. Backend validates ownership and prevents duplicate conversation tickets." , returnDirect = true)
-    @Transactional
     public Map<String,Object> createSupportTicket(String userMessage, String conversationId) {
         log.info("Creating support ticket from chat flow | conversationId: {}, messageLength: {}",
                 conversationId,

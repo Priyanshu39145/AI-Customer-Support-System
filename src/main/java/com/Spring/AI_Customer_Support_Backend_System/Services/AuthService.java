@@ -142,11 +142,10 @@ public class AuthService {
     Return New Tokens
      */
     @Transactional
-    public LoginResponseDTO refresh(RefreshTokenRequestDTO requestDTO) {
-        //So we get the refresh request from the frontend periodically whenever the JWT is expired ----
-        //The refresh request contains the RefreshTokenRequestDTO --- which contains just the refresh token ---
+    public LoginResponseDTO refresh(String refreshTokenValue) {
+        // The refresh token is read from the HttpOnly cookie by AuthController.
         //First of all we find the entity inside the database ----
-        RefreshToken existingToken = refreshTokenRepository.findByToken(hashToken(requestDTO.getRefreshToken()))
+        RefreshToken existingToken = refreshTokenRepository.findByToken(hashToken(refreshTokenValue))
                 .orElseThrow(() -> {
                     log.warn("Refresh failed - token not found");
                     return new BadCredentialsException("Invalid refresh token");
@@ -197,14 +196,19 @@ public class AuthService {
     }
 
     @Transactional //For logout we only set revoked as true due to which the current login session dismantle ----
-    public void logout(LogoutRequestDTO requestDTO) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(hashToken(requestDTO.getRefreshToken()))
-                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+    public void logout(String refreshTokenValue) {
+        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
+            return;
+        }
 
-        refreshToken.setRevoked(true);
-        refreshToken.setRevokedAt(LocalDateTime.now());
-        refreshTokenRepository.save(refreshToken);
-        log.info("Refresh token revoked | tokenId: {}", refreshToken.getId());
+        refreshTokenRepository.findByToken(hashToken(refreshTokenValue)).ifPresent(refreshToken -> {
+            if (!refreshToken.isRevoked()) {
+                refreshToken.setRevoked(true);
+                refreshToken.setRevokedAt(LocalDateTime.now());
+                refreshTokenRepository.save(refreshToken);
+                log.info("Refresh token revoked | tokenId: {}", refreshToken.getId());
+            }
+        });
     }
 
     @Transactional

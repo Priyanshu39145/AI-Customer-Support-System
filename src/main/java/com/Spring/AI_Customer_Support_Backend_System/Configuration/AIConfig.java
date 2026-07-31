@@ -1,16 +1,21 @@
 package com.Spring.AI_Customer_Support_Backend_System.Configuration;
 
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatModel;
+
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
-import org.springframework.beans.factory.annotation.Qualifier;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 @Configuration
 public class AIConfig {
@@ -18,11 +23,29 @@ public class AIConfig {
     @Value("${spring.ai.ollama.base-url}")
     private String ollama_base_url;
 
+
+    //Before it the OllamaApi used the default RestClient builder to request to ollama for a response
+    //Now we are giving it a timeout for all the responses ---- using JdkClientHttpRequestFactory ----
+    //We add this timeOutBoundedRestClientBuilder to both the chat client ollamaApis ----
+
+    // Local Ollama inference can legitimately take 20-30s; this bounds it so a stuck
+    // request fails fast instead of blocking a thread (and, previously, a DB connection) forever.
+    private RestClient.Builder timeoutBoundedRestClientBuilder() {
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build()
+        );
+        requestFactory.setReadTimeout(Duration.ofSeconds(45));
+        return RestClient.builder().requestFactory(requestFactory);
+    }
+
     // Fast model for intent analysis and structured outputs
     @Bean(name = "fastChatClient")
     public ChatClient fastChatClient() {
         OllamaApi ollamaApi = OllamaApi.builder()
                 .baseUrl(ollama_base_url)
+                .restClientBuilder(timeoutBoundedRestClientBuilder())
                 .build();
 
         OllamaChatModel chatModel = OllamaChatModel.builder()
@@ -44,6 +67,7 @@ public class AIConfig {
     public ChatClient conversationalChatClient() {
         OllamaApi ollamaApi = OllamaApi.builder()
                 .baseUrl(ollama_base_url)
+                .restClientBuilder(timeoutBoundedRestClientBuilder())
                 .build();
 
         OllamaChatModel chatModel = OllamaChatModel.builder()

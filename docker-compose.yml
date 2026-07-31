@@ -45,25 +45,25 @@ services:
 
 
 
-  # =========================
-  # Ollama Container
-  # =========================
-  ollama:
-    image: ollama/ollama
-
-    container_name: ai-ollama
-
-    ports:
-      - "11434:11434"
-
-    volumes:
-      - ollama_data:/root/.ollama
-
-    healthcheck:
-      test: [ "CMD", "ollama", "list" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+#  # =========================
+#  # Ollama Container
+#  # =========================
+#  ollama:
+#    image: ollama/ollama
+#
+#    container_name: ai-ollama
+#
+#    ports:
+#      - "11434:11434"
+#
+#    volumes:
+#      - ollama_data:/root/.ollama
+#
+#    healthcheck:
+#      test: [ "CMD", "ollama", "list" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 10
 
 
 
@@ -88,7 +88,8 @@ services:
       REDIS_HOST: redis
 
       # Ollama internal docker URL
-      OLLAMA_BASE_URL: http://ollama:11434
+#      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
 
       # Frontend URLs allowed for CORS
       CORS_ALLOWED_ORIGINS: http://localhost:5174
@@ -103,8 +104,8 @@ services:
       redis:
         condition: service_started
 
-      ollama:
-        condition: service_healthy
+#      ollama:
+#        condition: service_healthy
 
 
 
@@ -132,4 +133,4 @@ services:
 # =========================
 volumes:
   mariadb_data:
-  ollama_data:
+#  ollama_data:

@@ -91,6 +91,11 @@ export const TicketDetailPage = () => {
 
   const onSubmit = (data: CommentForm) => addCommentMutation.mutate(data.content);
 
+  const backPath =
+    user?.role === 'ADMIN'
+      ? '/admin/tickets'
+      : '/tickets';
+
   if (isLoading) return <PageLoader />;
   if (error || !ticket) {
     return (
@@ -98,9 +103,13 @@ export const TicketDetailPage = () => {
         title="Ticket not found"
         description="The ticket you're looking for doesn't exist or has been deleted"
         action={
-          <Link to="/tickets" className="btn-primary">
-            Back to Tickets
-          </Link>
+         <Link
+           to={backPath}
+           className="inline-flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+         >
+           <ArrowLeft className="w-4 h-4" />
+           Back to Tickets
+         </Link>
         }
       />
     );
@@ -110,7 +119,7 @@ export const TicketDetailPage = () => {
     <div className="space-y-6">
       {/* Back Link */}
       <Link
-        to="/tickets"
+        to={backPath}
         className="inline-flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -276,7 +285,7 @@ export const TicketDetailPage = () => {
               >
                 <option value="">Select Agent</option>
                 {agents?.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
+                  <option key={agent.agentId} value={agent.agentId}>
                     {agent.name} ({agent.email})
                   </option>
                 ))}
@@ -298,7 +307,7 @@ export const TicketDetailPage = () => {
                     <div className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2" />
                     <div>
                       <p className="text-sm text-[var(--color-text)]">
-                        {activity.actionType}
+                        {activity.action}
                       </p>
                       <p className="text-xs text-[var(--color-text-tertiary)]">
                         {activity.performedByName} - {safeFormatDate(activity.timestamp, 'MMM d, h:mm a')}
