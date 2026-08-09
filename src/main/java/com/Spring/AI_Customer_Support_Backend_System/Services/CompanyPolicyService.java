@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
@@ -126,6 +127,20 @@ public class CompanyPolicyService {
                     return new Document(doc.getFormattedContent(), metadata);
                 })
                 .toList();
+
+
+        // NEW: replace, don't accumulate — remove every prior chunk for this fileName
+        // right before writing the replacement, so the black-out window is as short as possible.
+        if (version > 1) {
+            log.info("Deleting prior chunks for fileName={} before writing version {}", fileName, version);
+            try {
+                FilterExpressionBuilder b = new FilterExpressionBuilder();
+                vectorStore.delete(b.eq("source", fileName).build());
+            } catch (Exception e) {
+                log.error("Failed to delete prior chunks for fileName={}", fileName, e);
+                throw e; // don't silently add version N+1 on top of stale version N chunks
+            }
+        }
 
         log.info("Adding documents to vector store");
         // Storage: write enriched chunks into the vector store after duplicate/version checks.

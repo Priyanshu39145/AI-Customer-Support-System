@@ -262,3 +262,6 @@ I removed ollama container from Docker ---- so that I can run Ollama models loca
 When I was using Ollama inside Docker ---- Docker was using CPU for all tasks ---- which led to 3 minutes to respond ---- Now I am using Ollama locally inside my PC ---- so now it takes max 45 seconds ----
 
 ----------------------------------------------------------------------------------------------------------------
+Fifth change -----
+
+I made this change to prevent old policy versions from remaining in the vector store and being retrieved alongside the new version. After detecting that the uploaded file is a new version (version > 1), I now delete all existing vector chunks for that fileName using a metadata filter (source == fileName) before adding the new chunks, so the vector store contains only the latest version of that policy and stale information cannot be retrieved or cited.

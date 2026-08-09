@@ -68,7 +68,7 @@ public class ToolService {
                     Map<String, Object> meta = doc.getMetadata();
 
                     String source = (String) meta.getOrDefault("source", "unknown");
-                    String page = String.valueOf(meta.getOrDefault("page", "N/A"));
+                    String page = String.valueOf(meta.getOrDefault("page", "N/A")); //Not present
 
                     return content + "\n(Source: " + source + ", Page: " + page + ")";
                 })
